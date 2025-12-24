@@ -2,6 +2,7 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
+const fs = require('fs');
 
 const app = express();
 const server = http.createServer(app);
@@ -16,6 +17,45 @@ app.get('/', (req, res) => {
 
 // Game state storage
 const games = new Map();
+
+// Admin system
+let adminConfig = {
+    admins: {},
+    registeredUsers: {}
+};
+
+// Load admin config
+try {
+    const configData = fs.readFileSync(path.join(__dirname, 'admin-config.json'), 'utf8');
+    adminConfig = JSON.parse(configData);
+} catch (err) {
+    console.log('No admin config found, using defaults');
+}
+
+// Save admin config
+function saveAdminConfig() {
+    fs.writeFileSync(
+        path.join(__dirname, 'admin-config.json'),
+        JSON.stringify(adminConfig, null, 2)
+    );
+}
+
+// Check if user is admin
+function isAdmin(ip, userId) {
+    return adminConfig.admins[ip] ||
+           (adminConfig.registeredUsers[userId] && adminConfig.registeredUsers[userId].isAdmin);
+}
+
+// Get admin permissions
+function getAdminPermissions(ip, userId) {
+    if (adminConfig.admins[ip]) {
+        return adminConfig.admins[ip].permissions || [];
+    }
+    if (adminConfig.registeredUsers[userId] && adminConfig.registeredUsers[userId].isAdmin) {
+        return adminConfig.registeredUsers[userId].permissions || [];
+    }
+    return [];
+}
 
 // Card and Game classes (server-side)
 class Card {
@@ -349,6 +389,16 @@ class UnoGame {
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
+    const clientIp = socket.handshake.address;
+    const isUserAdmin = isAdmin(clientIp, null);
+    const userPermissions = getAdminPermissions(clientIp, null);
+
+    // Send admin status to client
+    socket.emit('adminStatus', {
+        isAdmin: isUserAdmin,
+        permissions: userPermissions
+    });
+
     socket.on('createGame', ({ playerName, maxPlayers }) => {
         const roomCode = generateRoomCode();
         const game = new UnoGame(roomCode, maxPlayers);
@@ -471,6 +521,219 @@ io.on('connection', (socket) => {
             const player = game.getPlayerBySocketId(socket.id);
             io.to(roomCode).emit('unoCalled', { playerName: player.name });
         }
+    });
+
+    // Admin Commands
+    socket.on('adminKickPlayer', ({ roomCode, targetSocketId }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+        if (targetPlayer) {
+            game.removePlayer(targetSocketId);
+            io.to(targetSocketId).emit('kicked', { message: 'You were kicked by an admin' });
+            io.to(roomCode).emit('playerLeft', {
+                playerName: targetPlayer.name + ' (Kicked)',
+                gameState: game.getGameState()
+            });
+            console.log(`Admin kicked player: ${targetPlayer.name} from ${roomCode}`);
+        }
+    });
+
+    socket.on('adminEndGame', ({ roomCode }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        game.gameStarted = false;
+        io.to(roomCode).emit('gameOver', { winner: 'Admin ended the game' });
+        console.log(`Admin ended game: ${roomCode}`);
+    });
+
+    socket.on('adminSkipTurn', ({ roomCode }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game || !game.gameStarted) return;
+
+        const skippedPlayer = game.getCurrentPlayer();
+        game.nextTurn();
+
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+
+        io.to(roomCode).emit('adminAction', {
+            message: `Admin skipped ${skippedPlayer.name}'s turn`
+        });
+        console.log(`Admin skipped turn in ${roomCode}`);
+    });
+
+    socket.on('adminViewHands', ({ roomCode }) => {
+        if (!isUserAdmin || !userPermissions.includes('view_hands')) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const allHands = game.players.map(p => ({
+            name: p.name,
+            socketId: p.socketId,
+            hand: p.hand,
+            cardCount: p.hand.length
+        }));
+
+        socket.emit('adminHandsView', { players: allHands });
+    });
+
+    socket.on('adminForceStart', ({ roomCode }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        if (game.players.length < 2) {
+            socket.emit('error', { message: 'Need at least 2 players' });
+            return;
+        }
+
+        game.startGame();
+        io.to(roomCode).emit('gameStarted', {
+            message: 'Admin force-started the game!',
+            currentPlayer: game.getCurrentPlayer().name
+        });
+
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+        console.log(`Admin force-started game: ${roomCode}`);
+    });
+
+    socket.on('adminRegisterUser', ({ username, password, isAdmin: makeAdmin }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const userId = username.toLowerCase().replace(/\s+/g, '_');
+        adminConfig.registeredUsers[userId] = {
+            username: username,
+            password: password, // In production, hash this!
+            isAdmin: makeAdmin || false,
+            permissions: makeAdmin ? ['kick', 'end_game', 'skip_turn', 'view_hands', 'force_start'] : []
+        };
+
+        saveAdminConfig();
+        socket.emit('adminUserRegistered', {
+            message: `User ${username} registered successfully`,
+            userId: userId
+        });
+        console.log(`Admin registered new user: ${username} (Admin: ${makeAdmin})`);
+    });
+
+    socket.on('adminListUsers', () => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        socket.emit('adminUsersList', {
+            admins: adminConfig.admins,
+            users: adminConfig.registeredUsers
+        });
+    });
+
+    socket.on('adminChangeColor', ({ roomCode, color }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game || !game.gameStarted) return;
+
+        const topCard = game.getTopCard();
+        if (topCard) {
+            topCard.color = color;
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+            });
+            io.to(roomCode).emit('adminAction', {
+                message: `Admin changed color to ${color}`
+            });
+            console.log(`Admin changed color to ${color} in ${roomCode}`);
+        }
+    });
+
+    socket.on('adminRedrawCards', ({ roomCode, targetSocketId, count }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+        if (targetPlayer) {
+            for (let i = 0; i < count; i++) {
+                if (!game.deck.isEmpty()) {
+                    targetPlayer.addCard(game.deck.draw());
+                }
+            }
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+            });
+            io.to(roomCode).emit('adminAction', {
+                message: `Admin made ${targetPlayer.name} draw ${count} cards`
+            });
+            console.log(`Admin made ${targetPlayer.name} draw ${count} cards in ${roomCode}`);
+        }
+    });
+
+    socket.on('adminResetGame', ({ roomCode }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        game.gameStarted = false;
+        game.deck = null;
+        game.discardPile = [];
+        game.currentPlayerIndex = 0;
+        game.direction = 1;
+        game.players.forEach(p => {
+            p.hand = [];
+            p.calledUno = false;
+        });
+
+        io.to(roomCode).emit('gameReset', {
+            message: 'Admin reset the game'
+        });
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+        console.log(`Admin reset game: ${roomCode}`);
     });
 
     socket.on('disconnect', () => {

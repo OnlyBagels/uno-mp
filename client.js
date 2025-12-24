@@ -7,6 +7,8 @@ let playerName = null;
 let mySocketId = null;
 let pendingColorChoice = false;
 let pendingCardIndex = null;
+let isAdmin = false;
+let adminPermissions = [];
 
 // DOM Elements - Screens
 const loginScreen = document.getElementById('loginScreen');
@@ -41,11 +43,30 @@ const opponentsArea = document.getElementById('opponentsArea');
 const colorChooser = document.getElementById('colorChooser');
 const leaveGameBtn = document.getElementById('leaveGameBtn');
 
+// Notification System
+function showNotification(message, type = 'info', duration = 4000) {
+    const container = document.getElementById('notificationContainer');
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <div class="notification-message">${message}</div>
+        <button class="notification-close" onclick="this.parentElement.remove()">×</button>
+    `;
+    container.appendChild(notification);
+
+    if (duration > 0) {
+        setTimeout(() => {
+            notification.style.animation = 'slideIn 0.3s ease reverse';
+            setTimeout(() => notification.remove(), 300);
+        }, duration);
+    }
+}
+
 // Event Listeners - Login
 createGameBtn.addEventListener('click', () => {
     const name = playerNameInput.value.trim();
     if (!name) {
-        alert('Please enter your name');
+        showNotification('Please enter your name', 'warning');
         return;
     }
     playerName = name;
@@ -57,11 +78,11 @@ joinGameBtn.addEventListener('click', () => {
     const name = playerNameInput.value.trim();
     const roomCode = roomCodeInput.value.trim().toUpperCase();
     if (!name) {
-        alert('Please enter your name');
+        showNotification('Please enter your name', 'warning');
         return;
     }
     if (!roomCode) {
-        alert('Please enter a room code');
+        showNotification('Please enter a room code', 'warning');
         return;
     }
     playerName = name;
@@ -108,6 +129,15 @@ document.querySelectorAll('.color-btn').forEach(btn => {
 socket.on('connect', () => {
     console.log('Connected to server');
     mySocketId = socket.id;
+});
+
+socket.on('adminStatus', ({ isAdmin: adminStatus, permissions }) => {
+    isAdmin = adminStatus;
+    adminPermissions = permissions;
+    if (isAdmin) {
+        console.log('Admin privileges detected');
+        console.log('Permissions:', permissions);
+    }
 });
 
 socket.on('gameCreated', ({ roomCode, gameState }) => {
@@ -187,7 +217,42 @@ socket.on('playerLeft', ({ playerName: leftPlayerName, gameState }) => {
 });
 
 socket.on('error', ({ message }) => {
-    alert(message);
+    showNotification(message, 'error');
+});
+
+// Admin event handlers
+socket.on('kicked', ({ message }) => {
+    showNotification(message, 'error', 5000);
+    setTimeout(() => location.reload(), 5000);
+});
+
+socket.on('adminAction', ({ message }) => {
+    showNotification(`⚡ ${message}`, 'admin');
+    updateMessage(`⚡ ADMIN: ${message}`);
+});
+
+socket.on('adminHandsView', ({ players }) => {
+    console.log('=== ADMIN: All Player Hands ===');
+    players.forEach(p => {
+        console.log(`${p.name}:`, p.hand);
+    });
+    showNotification(`Player hands logged to console (${players.length} players)`, 'admin');
+});
+
+socket.on('adminUserRegistered', ({ message }) => {
+    showNotification(message, 'success');
+});
+
+socket.on('adminUsersList', ({ admins, users }) => {
+    console.log('=== ADMIN: Users List ===');
+    console.log('IP Admins:', admins);
+    console.log('Registered Users:', users);
+    showNotification('Users list logged to console', 'admin');
+});
+
+socket.on('gameReset', ({ message }) => {
+    showNotification(message, 'warning');
+    updateMessage('Game has been reset');
 });
 
 // Screen management
@@ -266,8 +331,14 @@ function renderOpponents(gameState) {
             if (player.isCurrentPlayer) {
                 opponentDiv.classList.add('current-turn');
             }
+
+            let adminButtons = '';
+            if (isAdmin && adminPermissions.includes('kick')) {
+                adminButtons = `<button class="btn-admin-small btn-admin-kick" onclick="adminKick('${player.socketId}')">Kick</button>`;
+            }
+
             opponentDiv.innerHTML = `
-                <div class="opponent-name">${player.name}</div>
+                <div class="opponent-name">${player.name} ${adminButtons}</div>
                 <div class="opponent-cards">
                     ${Array(player.cardCount).fill('').map(() => '<div class="card card-back-small"></div>').join('')}
                 </div>
@@ -336,3 +407,106 @@ function updateDeckCount(gameState) {
 function updateMessage(message) {
     gameMessage.textContent = message;
 }
+
+// Admin Functions (accessible globally for onclick handlers)
+window.adminKick = function(targetSocketId) {
+    if (!isAdmin) return;
+    socket.emit('adminKickPlayer', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId
+    });
+};
+
+window.adminEndGame = function() {
+    if (!isAdmin) return;
+    socket.emit('adminEndGame', { roomCode: currentRoomCode });
+};
+
+window.adminSkipTurn = function() {
+    if (!isAdmin) return;
+    socket.emit('adminSkipTurn', { roomCode: currentRoomCode });
+};
+
+window.adminViewHands = function() {
+    if (!isAdmin || !adminPermissions.includes('view_hands')) {
+        showNotification('No permission', 'error');
+        return;
+    }
+    socket.emit('adminViewHands', { roomCode: currentRoomCode });
+};
+
+window.adminForceStart = function() {
+    if (!isAdmin) return;
+    socket.emit('adminForceStart', { roomCode: currentRoomCode });
+};
+
+window.adminChangeColor = function(color) {
+    if (!isAdmin) return;
+    socket.emit('adminChangeColor', {
+        roomCode: currentRoomCode,
+        color: color
+    });
+    showNotification(`Changing color to ${color}`, 'admin');
+};
+
+window.adminRedrawCards = function(targetSocketId, count) {
+    if (!isAdmin) return;
+    socket.emit('adminRedrawCards', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId,
+        count: count || 2
+    });
+    showNotification(`Making player draw ${count || 2} cards`, 'admin');
+};
+
+window.adminResetGame = function() {
+    if (!isAdmin) return;
+    socket.emit('adminResetGame', { roomCode: currentRoomCode });
+    showNotification('Resetting game...', 'admin');
+};
+
+window.adminRegisterUser = function() {
+    if (!isAdmin) return;
+    const username = prompt('Enter username:');
+    if (!username) return;
+    const password = prompt('Enter password:');
+    if (!password) return;
+    const makeAdmin = confirm('Make this user an admin?');
+    socket.emit('adminRegisterUser', {
+        username: username,
+        password: password,
+        isAdmin: makeAdmin
+    });
+};
+
+window.adminListUsers = function() {
+    if (!isAdmin) return;
+    socket.emit('adminListUsers');
+};
+
+// Show admin panel if user is admin
+window.showAdminPanel = function() {
+    if (!isAdmin) {
+        showNotification('Not an admin', 'error');
+        return;
+    }
+    const panel = `
+=== ADMIN COMMANDS ===
+Commands available in browser console:
+
+adminKick(socketId) - Kick a player
+adminEndGame() - End current game
+adminSkipTurn() - Skip current player's turn
+adminViewHands() - View all player hands
+adminForceStart() - Force start the game
+adminChangeColor(color) - Change top card color (red/blue/green/yellow)
+adminRedrawCards(socketId, count) - Make player draw cards
+adminResetGame() - Reset the game
+adminRegisterUser() - Register a new user
+adminListUsers() - List all users
+
+Press F12 to open console
+    `;
+    showNotification('Admin panel opened - check console', 'admin');
+    console.log(panel);
+};
