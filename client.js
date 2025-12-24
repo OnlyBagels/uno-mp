@@ -71,7 +71,8 @@ createGameBtn.addEventListener('click', () => {
     }
     playerName = name;
     const maxPlayers = parseInt(maxPlayersSelect.value);
-    socket.emit('createGame', { playerName: name, maxPlayers });
+    const password = document.getElementById('passwordInput').value;
+    socket.emit('createGame', { playerName: name, maxPlayers, password: password || null });
 });
 
 joinGameBtn.addEventListener('click', () => {
@@ -86,8 +87,28 @@ joinGameBtn.addEventListener('click', () => {
         return;
     }
     playerName = name;
-    socket.emit('joinGame', { roomCode, playerName: name });
+    const password = document.getElementById('joinPasswordInput').value;
+    socket.emit('joinGame', { roomCode, playerName: name, password: password || null });
 });
+
+// Function to join a lobby from the list
+window.joinLobbyFromList = function(roomCode, hasPassword) {
+    const name = playerNameInput.value.trim();
+    if (!name) {
+        showNotification('Please enter your name first', 'warning');
+        playerNameInput.focus();
+        return;
+    }
+    playerName = name;
+
+    if (hasPassword) {
+        const password = prompt('This lobby is password protected. Enter password:');
+        if (password === null) return; // User cancelled
+        socket.emit('joinGame', { roomCode, playerName: name, password });
+    } else {
+        socket.emit('joinGame', { roomCode, playerName: name, password: null });
+    }
+};
 
 // Event Listeners - Lobby
 startGameBtn.addEventListener('click', () => {
@@ -129,6 +150,12 @@ document.querySelectorAll('.color-btn').forEach(btn => {
 socket.on('connect', () => {
     console.log('Connected to server');
     mySocketId = socket.id;
+    socket.emit('getLobbyList');
+});
+
+// Lobby list update
+socket.on('lobbyListUpdate', (lobbies) => {
+    updateLobbyList(lobbies);
 });
 
 socket.on('adminStatus', ({ isAdmin: adminStatus, permissions }) => {
@@ -211,10 +238,13 @@ socket.on('unoCalled', ({ playerName: unoPlayerName }) => {
 
 socket.on('gameOver', ({ winner }) => {
     updateMessage(`🎉 ${winner} wins the game! 🎉`);
+    showNotification(`🎉 ${winner} wins! Returning to lobby...`, 'success', 5000);
+
     setTimeout(() => {
-        if (confirm('Game Over! Play again?')) {
-            location.reload();
-        }
+        // Return to lobby screen
+        loginScreen.classList.add('hidden');
+        lobbyScreen.classList.remove('hidden');
+        gameScreen.classList.add('hidden');
     }, 3000);
 });
 
@@ -732,4 +762,47 @@ function updateAdminButton() {
             adminBtn.classList.add('hidden');
         }
     }
+}
+
+// Update lobby list display
+function updateLobbyList(lobbies) {
+    const lobbyListContainer = document.getElementById('lobbyList');
+    if (!lobbyListContainer) return;
+
+    if (lobbies.length === 0) {
+        lobbyListContainer.innerHTML = '<p class="no-lobbies">No active lobbies. Create one to get started!</p>';
+        return;
+    }
+
+    lobbyListContainer.innerHTML = '';
+    lobbies.forEach(lobby => {
+        const lobbyDiv = document.createElement('div');
+        lobbyDiv.className = 'lobby-item';
+        if (lobby.gameStarted) {
+            lobbyDiv.classList.add('lobby-in-progress');
+        }
+
+        const statusText = lobby.gameStarted ? 'In Progress' : 'Waiting';
+        const statusClass = lobby.gameStarted ? 'status-in-progress' : 'status-waiting';
+        const lockIcon = lobby.hasPassword ? '🔒 ' : '';
+
+        lobbyDiv.innerHTML = `
+            <div class="lobby-info">
+                <div class="lobby-header">
+                    <span class="lobby-code">${lockIcon}${lobby.roomCode}</span>
+                    <span class="lobby-status ${statusClass}">${statusText}</span>
+                </div>
+                <div class="lobby-details">
+                    <span class="lobby-creator">Created by: ${lobby.creatorName}</span>
+                    <span class="lobby-players">${lobby.playerCount}/${lobby.maxPlayers} players</span>
+                </div>
+            </div>
+            <button class="btn btn-join-lobby"
+                    onclick="joinLobbyFromList('${lobby.roomCode}', ${lobby.hasPassword})"
+                    ${lobby.playerCount >= lobby.maxPlayers && !lobby.gameStarted ? 'disabled' : ''}>
+                ${lobby.gameStarted ? 'Join (In Progress)' : lobby.playerCount >= lobby.maxPlayers ? 'Full' : 'Join'}
+            </button>
+        `;
+        lobbyListContainer.appendChild(lobbyDiv);
+    });
 }

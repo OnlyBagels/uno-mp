@@ -208,6 +208,129 @@ body {
     padding: 10px 0;
 }
 
+/* Lobby List Section */
+.lobby-list-section {
+    margin-top: 30px;
+    background: #f9fafb;
+    padding: 25px;
+    border-radius: 10px;
+}
+
+.lobby-list-section h3 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.lobby-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.lobby-item {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s ease;
+}
+
+.lobby-item:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.lobby-item.lobby-in-progress {
+    border-left: 4px solid #f59e0b;
+}
+
+.lobby-info {
+    flex: 1;
+    text-align: left;
+}
+
+.lobby-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.lobby-code {
+    font-family: 'Courier New', monospace;
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #1e3c72;
+}
+
+.lobby-status {
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+.status-waiting {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-in-progress {
+    background: #fed7aa;
+    color: #92400e;
+}
+
+.lobby-details {
+    display: flex;
+    gap: 15px;
+    font-size: 0.9rem;
+    color: #6b7280;
+}
+
+.lobby-creator {
+    font-weight: 500;
+}
+
+.lobby-players {
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+.btn-join-lobby {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-join-lobby:hover:not(:disabled) {
+    background: #2563eb;
+    transform: scale(1.05);
+}
+
+.btn-join-lobby:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.no-lobbies {
+    text-align: center;
+    color: #6b7280;
+    padding: 20px;
+    font-style: italic;
+}
+
 /* Lobby Screen */
 .lobby-container {
     max-width: 700px;

@@ -151,7 +151,7 @@ class Player {
 }
 
 class UnoGame {
-    constructor(roomCode, maxPlayers) {
+    constructor(roomCode, maxPlayers, password = null, creatorName = '') {
         this.roomCode = roomCode;
         this.maxPlayers = maxPlayers;
         this.deck = null;
@@ -164,6 +164,9 @@ class UnoGame {
         this.pendingCard = null;
         this.stackCount = 0; // Track stacked draw cards
         this.stackType = null; // 'draw2' or 'draw4'
+        this.password = password; // Room password (null if no password)
+        this.creatorName = creatorName; // Name of player who created the room
+        this.createdAt = Date.now(); // Timestamp when room was created
     }
 
     addPlayer(socketId, name) {
@@ -444,6 +447,24 @@ class UnoGame {
     }
 }
 
+// Helper function to get public lobby list
+function getPublicLobbies() {
+    const lobbies = [];
+    for (const [roomCode, game] of games.entries()) {
+        lobbies.push({
+            roomCode: roomCode,
+            creatorName: game.creatorName,
+            playerCount: game.players.length,
+            maxPlayers: game.maxPlayers,
+            hasPassword: !!game.password,
+            gameStarted: game.gameStarted,
+            createdAt: game.createdAt
+        });
+    }
+    // Sort by creation time (newest first)
+    return lobbies.sort((a, b) => b.createdAt - a.createdAt);
+}
+
 // Socket.io connection handling
 io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
@@ -458,22 +479,35 @@ io.on('connection', (socket) => {
         permissions: userPermissions
     });
 
-    socket.on('createGame', ({ playerName, maxPlayers }) => {
+    // Send initial lobby list
+    socket.emit('lobbyListUpdate', getPublicLobbies());
+
+    socket.on('createGame', ({ playerName, maxPlayers, password }) => {
         const roomCode = generateRoomCode();
-        const game = new UnoGame(roomCode, maxPlayers);
+        const game = new UnoGame(roomCode, maxPlayers, password || null, playerName);
         game.addPlayer(socket.id, playerName);
         games.set(roomCode, game);
 
         socket.join(roomCode);
         socket.emit('gameCreated', { roomCode, gameState: game.getGameState(socket.id) });
-        console.log(`Game created: ${roomCode} by ${playerName}`);
+
+        // Broadcast lobby list update to all connected clients
+        io.emit('lobbyListUpdate', getPublicLobbies());
+
+        console.log(`Game created: ${roomCode} by ${playerName}${password ? ' (Password Protected)' : ''}`);
     });
 
-    socket.on('joinGame', ({ roomCode, playerName }) => {
+    socket.on('joinGame', ({ roomCode, playerName, password }) => {
         const game = games.get(roomCode);
 
         if (!game) {
             socket.emit('error', { message: 'Game not found' });
+            return;
+        }
+
+        // Check password
+        if (game.password && game.password !== password) {
+            socket.emit('error', { message: 'Incorrect password' });
             return;
         }
 
@@ -496,7 +530,15 @@ io.on('connection', (socket) => {
             gameState: game.getGameState()
         });
 
+        // Broadcast lobby list update
+        io.emit('lobbyListUpdate', getPublicLobbies());
+
         console.log(`${playerName} joined game: ${roomCode}`);
+    });
+
+    // Get list of available lobbies
+    socket.on('getLobbyList', () => {
+        socket.emit('lobbyListUpdate', getPublicLobbies());
     });
 
     socket.on('startGame', ({ roomCode }) => {
@@ -529,9 +571,29 @@ io.on('connection', (socket) => {
                 socket.emit('chooseColor', {});
             } else if (result.winner) {
                 io.to(roomCode).emit('gameOver', { winner: result.winner });
+
+                // Reset game but keep lobby
+                game.gameStarted = false;
+                game.deck = null;
+                game.discardPile = [];
+                game.currentPlayerIndex = 0;
+                game.direction = 1;
+                game.stackCount = 0;
+                game.stackType = null;
+                game.waitingForColorChoice = false;
+                game.pendingCard = null;
+                game.players.forEach(p => {
+                    p.hand = [];
+                    p.calledUno = false;
+                    p.drawnThisTurn = false;
+                });
+
                 game.players.forEach(player => {
                     io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
                 });
+
+                // Update lobby list
+                io.emit('lobbyListUpdate', getPublicLobbies());
             } else {
                 game.players.forEach(player => {
                     io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));

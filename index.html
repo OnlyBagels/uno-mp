@@ -29,16 +29,24 @@
                             <option value="9">9 Players</option>
                             <option value="10">10 Players</option>
                         </select>
+                        <label for="passwordInput">Password (Optional):</label>
+                        <input type="password" id="passwordInput" placeholder="Leave blank for no password" maxlength="20">
                         <button id="createGameBtn" class="btn btn-primary">Create Game</button>
                     </div>
 
                     <div class="divider">OR</div>
 
                     <div class="option-group">
-                        <h3>Join Existing Game</h3>
+                        <h3>Join by Code</h3>
                         <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
+                        <input type="password" id="joinPasswordInput" placeholder="Password (if required)" maxlength="20">
                         <button id="joinGameBtn" class="btn btn-secondary">Join Game</button>
                     </div>
+                </div>
+
+                <div class="lobby-list-section">
+                    <h3>Available Lobbies</h3>
+                    <div id="lobbyList" class="lobby-list"></div>
                 </div>
             </div>
         </div>
