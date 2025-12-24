@@ -140,6 +140,9 @@ socket.on('loginResult', ({ success, user, message }) => {
 
         // Update username display
         document.getElementById('usernameDisplay').textContent = `Logged in as: ${user.username}${user.isAdmin ? ' (Admin)' : ''}`;
+
+        // Auto-fill display name with username
+        playerNameInput.value = user.username;
     } else {
         showNotification(message || 'Login failed', 'error');
     }
