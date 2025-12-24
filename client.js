@@ -102,6 +102,9 @@ document.getElementById('loginBtn').addEventListener('click', () => {
         return;
     }
 
+    // Store credentials temporarily for session persistence
+    sessionStorage.setItem('loginCredentials', JSON.stringify({ username, password }));
+
     socket.emit('login', { username, password });
 });
 
@@ -141,6 +144,9 @@ document.getElementById('guestBtn').addEventListener('click', () => {
     const guestName = generateGuestName();
     currentUser = { username: guestName, isAdmin: false, isMod: false, isGuest: true };
 
+    // Save guest session to localStorage
+    localStorage.setItem('wildDrawSession', JSON.stringify(currentUser));
+
     showNotification(`Welcome, ${guestName}!`, 'success');
 
     // Show lobby selection screen
@@ -157,6 +163,9 @@ document.getElementById('guestBtn').addEventListener('click', () => {
 
 // Logout Handler
 document.getElementById('logoutBtn').addEventListener('click', () => {
+    // Clear stored session
+    localStorage.removeItem('wildDrawSession');
+    sessionStorage.removeItem('loginCredentials');
     location.reload();
 });
 
@@ -164,6 +173,21 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 socket.on('loginResult', ({ success, user, message }) => {
     if (success) {
         currentUser = user;
+
+        // Save session to localStorage
+        const credentials = sessionStorage.getItem('loginCredentials');
+        if (credentials) {
+            const { username, password } = JSON.parse(credentials);
+            localStorage.setItem('wildDrawSession', JSON.stringify({
+                username,
+                password,
+                isAdmin: user.isAdmin,
+                isMod: user.isMod,
+                isGuest: false
+            }));
+            sessionStorage.removeItem('loginCredentials');
+        }
+
         showNotification(`Welcome back, ${user.username}!`, 'success');
 
         // Show lobby selection screen
@@ -178,6 +202,7 @@ socket.on('loginResult', ({ success, user, message }) => {
         playerNameInput.readOnly = true;
     } else {
         showNotification(message || 'Login failed', 'error');
+        sessionStorage.removeItem('loginCredentials');
     }
 });
 
@@ -277,6 +302,35 @@ document.querySelectorAll('.color-btn').forEach(btn => {
         const color = e.target.dataset.color;
         handleColorChoice(color);
     });
+});
+
+// Check for stored session on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const storedSession = localStorage.getItem('wildDrawSession');
+    if (storedSession) {
+        try {
+            const session = JSON.parse(storedSession);
+
+            if (session.isGuest) {
+                // Restore guest session
+                currentUser = session;
+                accountScreen.classList.add('hidden');
+                loginScreen.classList.remove('hidden');
+                document.getElementById('usernameDisplay').textContent = `Guest: ${session.username}`;
+                playerNameInput.value = session.username;
+                playerNameInput.readOnly = true;
+            } else {
+                // Auto-login with stored credentials
+                socket.emit('login', {
+                    username: session.username,
+                    password: session.password
+                });
+            }
+        } catch (e) {
+            console.error('Failed to restore session:', e);
+            localStorage.removeItem('wildDrawSession');
+        }
+    }
 });
 
 // Socket.io event handlers
