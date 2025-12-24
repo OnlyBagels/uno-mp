@@ -64,6 +64,19 @@ function showNotification(message, type = 'info', duration = 4000) {
     }
 }
 
+// Guest name generation
+function generateGuestName() {
+    const colors = ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange', 'Pink', 'Cyan', 'Magenta', 'Gold', 'Silver', 'Bronze', 'Violet', 'Crimson', 'Emerald', 'Sapphire'];
+    const animals = ['Lion', 'Tiger', 'Bear', 'Wolf', 'Fox', 'Eagle', 'Hawk', 'Falcon', 'Panda', 'Dragon', 'Phoenix', 'Shark', 'Whale', 'Dolphin', 'Owl', 'Raven', 'Cobra', 'Panther'];
+    const objects = ['Sword', 'Shield', 'Crown', 'Star', 'Moon', 'Sun', 'Thunder', 'Lightning', 'Flame', 'Ice', 'Storm', 'Wind', 'Rock', 'Crystal', 'Diamond', 'Gem', 'Arrow', 'Hammer'];
+
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const animal = animals[Math.floor(Math.random() * animals.length)];
+    const object = objects[Math.floor(Math.random() * objects.length)];
+
+    return `${color}${animal}${object}`;
+}
+
 // Account Screen Tab Switching
 document.getElementById('loginTabBtn').addEventListener('click', () => {
     document.getElementById('loginTab').classList.add('active');
@@ -123,6 +136,25 @@ document.getElementById('registerBtn').addEventListener('click', () => {
     socket.emit('register', { username, password });
 });
 
+// Guest Handler
+document.getElementById('guestBtn').addEventListener('click', () => {
+    const guestName = generateGuestName();
+    currentUser = { username: guestName, isAdmin: false, isMod: false, isGuest: true };
+
+    showNotification(`Welcome, ${guestName}!`, 'success');
+
+    // Show lobby selection screen
+    accountScreen.classList.add('hidden');
+    loginScreen.classList.remove('hidden');
+
+    // Update username display
+    document.getElementById('usernameDisplay').textContent = `Guest: ${guestName}`;
+
+    // Auto-fill display name with guest name and make it readonly
+    playerNameInput.value = guestName;
+    playerNameInput.readOnly = true;
+});
+
 // Logout Handler
 document.getElementById('logoutBtn').addEventListener('click', () => {
     location.reload();
@@ -141,8 +173,9 @@ socket.on('loginResult', ({ success, user, message }) => {
         // Update username display
         document.getElementById('usernameDisplay').textContent = `Logged in as: ${user.username}${user.isAdmin ? ' (Admin)' : ''}`;
 
-        // Auto-fill display name with username
+        // Auto-fill display name with username and make it readonly
         playerNameInput.value = user.username;
+        playerNameInput.readOnly = true;
     } else {
         showNotification(message || 'Login failed', 'error');
     }

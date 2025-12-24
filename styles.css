@@ -261,6 +261,18 @@ body {
     box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.login-form input[type="text"]:read-only {
+    background: #f3f4f6;
+    color: #6b7280;
+    cursor: not-allowed;
+    border-color: #d1d5db;
+}
+
+.login-form input[type="text"]:read-only:focus {
+    border-color: #d1d5db;
+    box-shadow: none;
+}
+
 .game-options {
     display: flex;
     flex-direction: column;
@@ -299,6 +311,14 @@ body {
     font-weight: bold;
     color: #6b7280;
     padding: 10px 0;
+}
+
+.divider-small {
+    text-align: center;
+    font-weight: 600;
+    color: #9ca3af;
+    font-size: 0.85rem;
+    margin: 10px 0;
 }
 
 /* Lobby List Section */
