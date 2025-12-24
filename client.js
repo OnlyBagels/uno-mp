@@ -9,8 +9,10 @@ let pendingColorChoice = false;
 let pendingCardIndex = null;
 let isAdmin = false;
 let adminPermissions = [];
+let currentUser = null;
 
 // DOM Elements - Screens
+const accountScreen = document.getElementById('accountScreen');
 const loginScreen = document.getElementById('loginScreen');
 const lobbyScreen = document.getElementById('lobbyScreen');
 const gameScreen = document.getElementById('gameScreen');
@@ -61,6 +63,101 @@ function showNotification(message, type = 'info', duration = 4000) {
         }, duration);
     }
 }
+
+// Account Screen Tab Switching
+document.getElementById('loginTabBtn').addEventListener('click', () => {
+    document.getElementById('loginTab').classList.add('active');
+    document.getElementById('registerTab').classList.remove('active');
+    document.getElementById('loginTabBtn').classList.add('active');
+    document.getElementById('registerTabBtn').classList.remove('active');
+});
+
+document.getElementById('registerTabBtn').addEventListener('click', () => {
+    document.getElementById('registerTab').classList.add('active');
+    document.getElementById('loginTab').classList.remove('active');
+    document.getElementById('registerTabBtn').classList.add('active');
+    document.getElementById('loginTabBtn').classList.remove('active');
+});
+
+// Login Handler
+document.getElementById('loginBtn').addEventListener('click', () => {
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+
+    if (!username || !password) {
+        showNotification('Please enter username and password', 'warning');
+        return;
+    }
+
+    socket.emit('login', { username, password });
+});
+
+// Allow Enter key for login
+document.getElementById('loginPassword').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        document.getElementById('loginBtn').click();
+    }
+});
+
+// Register Handler
+document.getElementById('registerBtn').addEventListener('click', () => {
+    const username = document.getElementById('registerUsername').value.trim();
+    const password = document.getElementById('registerPassword').value;
+    const confirmPassword = document.getElementById('registerPasswordConfirm').value;
+
+    if (!username || !password || !confirmPassword) {
+        showNotification('Please fill in all fields', 'warning');
+        return;
+    }
+
+    if (password !== confirmPassword) {
+        showNotification('Passwords do not match', 'error');
+        return;
+    }
+
+    if (password.length < 4) {
+        showNotification('Password must be at least 4 characters', 'warning');
+        return;
+    }
+
+    socket.emit('register', { username, password });
+});
+
+// Logout Handler
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    location.reload();
+});
+
+// Login/Register Result Handlers
+socket.on('loginResult', ({ success, user, message }) => {
+    if (success) {
+        currentUser = user;
+        showNotification(`Welcome back, ${user.username}!`, 'success');
+
+        // Show lobby selection screen
+        accountScreen.classList.add('hidden');
+        loginScreen.classList.remove('hidden');
+
+        // Update username display
+        document.getElementById('usernameDisplay').textContent = `Logged in as: ${user.username}${user.isAdmin ? ' (Admin)' : ''}`;
+    } else {
+        showNotification(message || 'Login failed', 'error');
+    }
+});
+
+socket.on('registerResult', ({ success, message }) => {
+    if (success) {
+        showNotification(message, 'success');
+        // Switch to login tab
+        document.getElementById('loginTabBtn').click();
+        // Clear register form
+        document.getElementById('registerUsername').value = '';
+        document.getElementById('registerPassword').value = '';
+        document.getElementById('registerPasswordConfirm').value = '';
+    } else {
+        showNotification(message || 'Registration failed', 'error');
+    }
+});
 
 // Event Listeners - Login
 createGameBtn.addEventListener('click', () => {
@@ -201,8 +298,16 @@ socket.on('chooseColor', () => {
     updateMessage('Choose a color for your Wild card!');
 });
 
-socket.on('cardPlayed', ({ playerName: playedPlayerName, currentPlayer }) => {
+socket.on('cardPlayed', ({ playerName: playedPlayerName, currentPlayer, cardIndex }) => {
     updateMessage(`${playedPlayerName} played a card. ${currentPlayer}'s turn!`);
+
+    // Trigger animation for the player who played the card
+    if (playedPlayerName === playerName && cardIndex !== undefined) {
+        const cards = playerHand.querySelectorAll('.card');
+        if (cards[cardIndex]) {
+            cards[cardIndex].classList.add('card-playing');
+        }
+    }
 });
 
 socket.on('cardDrawn', ({ card, canPlay }) => {
@@ -426,7 +531,17 @@ function createCardElement(card) {
         cardDiv.classList.add('card-wild');
     }
 
-    cardDiv.innerHTML = `<span class="card-value">${card.value}</span>`;
+    // Format card value for better display
+    let displayValue = card.value;
+
+    // Simplify draw cards to use +2 and +4 notation
+    if (card.value === 'Wild Draw Four') {
+        displayValue = 'Wild<br>+4';
+    } else if (card.value === 'Draw Two') {
+        displayValue = '+2';
+    }
+
+    cardDiv.innerHTML = `<span class="card-value">${displayValue}</span>`;
     return cardDiv;
 }
 
@@ -434,11 +549,6 @@ function handleCardClick(cardIndex, card, cardElement) {
     if (pendingColorChoice) {
         updateMessage('Please choose a color first!');
         return;
-    }
-
-    // Add playing animation
-    if (cardElement) {
-        cardElement.classList.add('card-playing');
     }
 
     pendingCardIndex = cardIndex;

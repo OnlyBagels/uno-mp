@@ -3,6 +3,7 @@ const http = require('http');
 const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
+const db = require('./database');
 
 const app = express();
 const server = http.createServer(app);
@@ -482,6 +483,63 @@ io.on('connection', (socket) => {
     // Send initial lobby list
     socket.emit('lobbyListUpdate', getPublicLobbies());
 
+    // User session storage
+    let userSession = null;
+
+    // Login handler
+    socket.on('login', ({ username, password }) => {
+        db.authenticateUser(username, password, (err, result) => {
+            if (err) {
+                console.error('Login error:', err);
+                socket.emit('loginResult', { success: false, message: 'Server error' });
+                return;
+            }
+
+            if (result.success) {
+                userSession = result.user;
+                socket.emit('loginResult', {
+                    success: true,
+                    user: {
+                        username: result.user.username,
+                        isAdmin: result.user.isAdmin,
+                        isMod: result.user.isMod
+                    }
+                });
+
+                // Update admin status
+                socket.emit('adminStatus', {
+                    isAdmin: result.user.isAdmin,
+                    permissions: result.user.isAdmin ? ['kick', 'skip', 'view_hands', 'change_color', 'end_game', 'reset_game'] : []
+                });
+
+                console.log(`User logged in: ${username} (Admin: ${result.user.isAdmin})`);
+            } else {
+                socket.emit('loginResult', { success: false, message: result.message });
+            }
+        });
+    });
+
+    // Register handler
+    socket.on('register', ({ username, password }) => {
+        db.createUser(username, password, false, (err, result) => {
+            if (err) {
+                console.error('Registration error:', err);
+                socket.emit('registerResult', { success: false, message: 'Server error' });
+                return;
+            }
+
+            if (result.success) {
+                socket.emit('registerResult', {
+                    success: true,
+                    message: 'Account created successfully! Please login.'
+                });
+                console.log(`New user registered: ${username}`);
+            } else {
+                socket.emit('registerResult', { success: false, message: result.message });
+            }
+        });
+    });
+
     socket.on('createGame', ({ playerName, maxPlayers, password }) => {
         const roomCode = generateRoomCode();
         const game = new UnoGame(roomCode, maxPlayers, password || null, playerName);
@@ -600,7 +658,8 @@ io.on('connection', (socket) => {
                 });
                 io.to(roomCode).emit('cardPlayed', {
                     playerName: game.getPlayerBySocketId(socket.id).name,
-                    currentPlayer: game.getCurrentPlayer().name
+                    currentPlayer: game.getCurrentPlayer().name,
+                    cardIndex: cardIndex
                 });
             }
         } else {

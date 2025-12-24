@@ -7,12 +7,47 @@
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <!-- Login Screen -->
-    <div id="loginScreen" class="screen">
+    <!-- Account Login Screen -->
+    <div id="accountScreen" class="screen">
         <div class="login-container">
             <h1>Wild Draw</h1>
+            <div class="account-tabs">
+                <button id="loginTabBtn" class="tab-btn active">Login</button>
+                <button id="registerTabBtn" class="tab-btn">Register</button>
+            </div>
+
+            <!-- Login Tab -->
+            <div id="loginTab" class="tab-content active">
+                <div class="account-form">
+                    <input type="text" id="loginUsername" placeholder="Username" maxlength="20" autocomplete="username">
+                    <input type="password" id="loginPassword" placeholder="Password" maxlength="50" autocomplete="current-password">
+                    <button id="loginBtn" class="btn btn-primary">Login</button>
+                    <p class="form-info">Default admin account: username: admin, password: password</p>
+                </div>
+            </div>
+
+            <!-- Register Tab -->
+            <div id="registerTab" class="tab-content">
+                <div class="account-form">
+                    <input type="text" id="registerUsername" placeholder="Username" maxlength="20" autocomplete="username">
+                    <input type="password" id="registerPassword" placeholder="Password" maxlength="50" autocomplete="new-password">
+                    <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password" maxlength="50" autocomplete="new-password">
+                    <button id="registerBtn" class="btn btn-primary">Create Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lobby Selection Screen -->
+    <div id="loginScreen" class="screen hidden">
+        <div class="login-container">
+            <h1>Wild Draw</h1>
+            <div class="user-info-bar">
+                <span id="usernameDisplay"></span>
+                <button id="logoutBtn" class="btn btn-danger-small">Logout</button>
+            </div>
             <div class="login-form">
-                <input type="text" id="playerNameInput" placeholder="Enter your name" maxlength="20">
+                <input type="text" id="playerNameInput" placeholder="Enter your display name" maxlength="20">
 
                 <div class="game-options">
                     <div class="option-group">
