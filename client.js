@@ -138,6 +138,7 @@ socket.on('adminStatus', ({ isAdmin: adminStatus, permissions }) => {
         console.log('Admin privileges detected');
         console.log('Permissions:', permissions);
     }
+    updateAdminButton();
 });
 
 socket.on('gameCreated', ({ roomCode, gameState }) => {
@@ -164,6 +165,7 @@ socket.on('gameStarted', ({ message, currentPlayer }) => {
 
 socket.on('gameState', (gameState) => {
     renderGame(gameState);
+    updateAdminPlayersList(gameState.players);
 });
 
 socket.on('chooseColor', () => {
@@ -182,6 +184,15 @@ socket.on('cardDrawn', ({ card, canPlay }) => {
     } else {
         updateMessage('Drew a card. Turn passed.');
     }
+
+    // Trigger draw animation on the last card (newly drawn)
+    setTimeout(() => {
+        const cards = playerHand.querySelectorAll('.card');
+        if (cards.length > 0) {
+            const lastCard = cards[cards.length - 1];
+            lastCard.classList.add('card-drawn');
+        }
+    }, 100);
 });
 
 socket.on('turnPassed', ({ currentPlayer }) => {
@@ -255,6 +266,27 @@ socket.on('gameReset', ({ message }) => {
     updateMessage('Game has been reset');
 });
 
+// Chat event handlers
+socket.on('chatMessage', (data) => {
+    displayChatMessage(data);
+});
+
+socket.on('playerPromoted', ({ playerName, role }) => {
+    showNotification(`${playerName} promoted to ${role}`, 'admin');
+    displayChatMessage({
+        isSystem: true,
+        message: `${playerName} has been promoted to ${role}`
+    });
+});
+
+socket.on('playerDemoted', ({ playerName }) => {
+    showNotification(`${playerName} demoted from moderator`, 'admin');
+    displayChatMessage({
+        isSystem: true,
+        message: `${playerName} has been demoted from moderator`
+    });
+});
+
 // Screen management
 function showLobby(gameState) {
     loginScreen.classList.add('hidden');
@@ -307,7 +339,13 @@ function renderPlayerHand(gameState) {
 
     gameState.playerHand.forEach((card, index) => {
         const cardElement = createCardElement(card);
-        cardElement.addEventListener('click', () => handleCardClick(index, card));
+
+        // Check if card can be played
+        if (gameState.topCard && card.canPlayOn && card.canPlayOn(gameState.topCard)) {
+            cardElement.classList.add('playable');
+        }
+
+        cardElement.addEventListener('click', () => handleCardClick(index, card, cardElement));
         playerHand.appendChild(cardElement);
     });
 }
@@ -362,10 +400,15 @@ function createCardElement(card) {
     return cardDiv;
 }
 
-function handleCardClick(cardIndex, card) {
+function handleCardClick(cardIndex, card, cardElement) {
     if (pendingColorChoice) {
         updateMessage('Please choose a color first!');
         return;
+    }
+
+    // Add playing animation
+    if (cardElement) {
+        cardElement.classList.add('card-playing');
     }
 
     pendingCardIndex = cardIndex;
@@ -398,6 +441,14 @@ function updateGameInfo(gameState) {
         }
     }
     directionArrow.textContent = gameState.direction === 1 ? '→' : '←';
+
+    // Display stack information
+    if (gameState.stackCount && gameState.stackCount > 0) {
+        const stackType = gameState.stackType === 'draw2' ? '+2' : '+4';
+        gameMessage.textContent = `⚡ Stack active! ${gameState.stackCount} cards (${stackType}) - Stack or draw!`;
+        gameMessage.style.color = '#ff4444';
+        gameMessage.style.fontWeight = 'bold';
+    }
 }
 
 function updateDeckCount(gameState) {
@@ -510,3 +561,175 @@ Press F12 to open console
     showNotification('Admin panel opened - check console', 'admin');
     console.log(panel);
 };
+
+// Admin Menu UI Functions
+window.openAdminMenu = function() {
+    if (!isAdmin) {
+        showNotification('Not an admin', 'error');
+        return;
+    }
+    const modal = document.getElementById('adminMenuModal');
+    modal.classList.remove('hidden');
+    socket.emit('getGameState', { roomCode: currentRoomCode });
+};
+
+window.closeAdminMenu = function() {
+    const modal = document.getElementById('adminMenuModal');
+    modal.classList.add('hidden');
+};
+
+window.adminPromoteToMod = function(targetSocketId) {
+    if (!isAdmin) return;
+    socket.emit('adminPromoteToMod', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId
+    });
+    showNotification('Player promoted to moderator', 'admin');
+};
+
+window.adminDemoteFromMod = function(targetSocketId) {
+    if (!isAdmin) return;
+    socket.emit('adminDemoteFromMod', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId
+    });
+    showNotification('Player demoted from moderator', 'admin');
+};
+
+window.adminPromoteToAdmin = function(targetSocketId) {
+    if (!isAdmin) return;
+    socket.emit('adminPromoteToAdmin', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId
+    });
+    showNotification('Player promoted to admin', 'admin');
+};
+
+// Update admin players list
+function updateAdminPlayersList(players) {
+    const list = document.getElementById('adminPlayersList');
+    if (!list) return;
+
+    list.innerHTML = '';
+    players.forEach(player => {
+        const playerDiv = document.createElement('div');
+        playerDiv.className = 'admin-player-item';
+
+        const role = player.isAdmin ? 'Admin' : (player.isMod ? 'Mod' : 'Player');
+        const roleClass = player.isAdmin ? 'role-admin' : (player.isMod ? 'role-mod' : 'role-player');
+
+        let buttons = '';
+        if (player.socketId !== mySocketId && isAdmin) {
+            if (!player.isAdmin) {
+                if (player.isMod) {
+                    buttons = `
+                        <button class="btn-admin-small" onclick="adminDemoteFromMod('${player.socketId}')">Demote</button>
+                        <button class="btn-admin-small" onclick="adminPromoteToAdmin('${player.socketId}')">Make Admin</button>
+                    `;
+                } else {
+                    buttons = `
+                        <button class="btn-admin-small" onclick="adminPromoteToMod('${player.socketId}')">Make Mod</button>
+                        <button class="btn-admin-small" onclick="adminPromoteToAdmin('${player.socketId}')">Make Admin</button>
+                    `;
+                }
+                buttons += `<button class="btn-admin-small btn-admin-kick" onclick="adminKick('${player.socketId}')">Kick</button>`;
+            }
+        }
+
+        playerDiv.innerHTML = `
+            <div class="admin-player-info">
+                <span class="admin-player-name">${player.name}</span>
+                <span class="admin-player-role ${roleClass}">${role}</span>
+            </div>
+            <div class="admin-player-actions">${buttons}</div>
+        `;
+        list.appendChild(playerDiv);
+    });
+}
+
+// Chat System Functions
+let chatMinimized = false;
+
+window.toggleChat = function() {
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.querySelector('.chat-input-area');
+    const chatToggle = document.getElementById('chatToggle');
+
+    chatMinimized = !chatMinimized;
+
+    if (chatMinimized) {
+        chatMessages.style.display = 'none';
+        chatInput.style.display = 'none';
+        chatToggle.textContent = '▲';
+    } else {
+        chatMessages.style.display = 'flex';
+        chatInput.style.display = 'flex';
+        chatToggle.textContent = '▼';
+    }
+};
+
+window.sendChatMessage = function() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+
+    if (!message || !currentRoomCode) return;
+
+    socket.emit('chatMessage', {
+        roomCode: currentRoomCode,
+        message: message
+    });
+
+    chatInput.value = '';
+};
+
+// Chat input event listener
+document.getElementById('chatInput').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        sendChatMessage();
+    }
+});
+
+document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+
+// Display chat message
+function displayChatMessage(data) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+
+    const timestamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+    if (data.isSystem) {
+        messageDiv.className = 'chat-message system-message';
+        messageDiv.innerHTML = `
+            <span class="chat-timestamp">${timestamp}</span>
+            <span class="chat-text">${data.message}</span>
+        `;
+    } else {
+        const messageClass = data.isAdmin ? 'admin-message' : (data.isMod ? 'mod-message' : 'chat-message');
+        const roleLabel = data.isAdmin ? '[ADMIN] ' : (data.isMod ? '[MOD] ' : '');
+
+        messageDiv.className = messageClass;
+        messageDiv.innerHTML = `
+            <div class="chat-message-header">
+                <span class="chat-sender">${roleLabel}${data.playerName}</span>
+                <span class="chat-timestamp">${timestamp}</span>
+            </div>
+            <div class="chat-text">${data.message}</div>
+        `;
+    }
+
+    chatMessages.appendChild(messageDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Show/hide admin button
+function updateAdminButton() {
+    const adminBtn = document.getElementById('adminMenuBtn');
+    if (adminBtn) {
+        if (isAdmin) {
+            adminBtn.classList.remove('hidden');
+        } else {
+            adminBtn.classList.add('hidden');
+        }
+    }
+}

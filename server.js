@@ -129,6 +129,9 @@ class Player {
         this.socketId = socketId;
         this.hand = [];
         this.calledUno = false;
+        this.isMod = false;
+        this.isAdmin = false;
+        this.drawnThisTurn = false;
     }
 
     addCard(card) {
@@ -159,6 +162,8 @@ class UnoGame {
         this.gameStarted = false;
         this.waitingForColorChoice = false;
         this.pendingCard = null;
+        this.stackCount = 0; // Track stacked draw cards
+        this.stackType = null; // 'draw2' or 'draw4'
     }
 
     addPlayer(socketId, name) {
@@ -282,6 +287,8 @@ class UnoGame {
             case 'Skip':
                 this.nextTurn();
                 this.nextTurn();
+                this.stackCount = 0;
+                this.stackType = null;
                 break;
 
             case 'Reverse':
@@ -290,27 +297,60 @@ class UnoGame {
                     this.nextTurn();
                 }
                 this.nextTurn();
+                this.stackCount = 0;
+                this.stackType = null;
                 break;
 
             case 'Draw Two':
+                // Stack the draw count
+                this.stackCount += 2;
+                this.stackType = 'draw2';
                 this.nextTurn();
+
+                // Check if next player can stack
                 const nextPlayer = this.getCurrentPlayer();
-                nextPlayer.addCard(this.deck.draw());
-                nextPlayer.addCard(this.deck.draw());
-                this.nextTurn();
+                const hasDrawTwo = nextPlayer.hand.some(c => c.value === 'Draw Two');
+
+                if (!hasDrawTwo) {
+                    // Next player must draw all stacked cards
+                    for (let i = 0; i < this.stackCount; i++) {
+                        if (!this.deck.isEmpty()) {
+                            nextPlayer.addCard(this.deck.draw());
+                        }
+                    }
+                    this.stackCount = 0;
+                    this.stackType = null;
+                    this.nextTurn();
+                }
                 break;
 
             case 'Wild Draw Four':
+                // Stack the draw count
+                this.stackCount += 4;
+                this.stackType = 'draw4';
                 this.nextTurn();
+
+                // Check if next player can stack
                 const challengedPlayer = this.getCurrentPlayer();
-                for (let i = 0; i < 4; i++) {
-                    challengedPlayer.addCard(this.deck.draw());
+                const hasDrawFour = challengedPlayer.hand.some(c => c.value === 'Wild Draw Four');
+
+                if (!hasDrawFour) {
+                    // Next player must draw all stacked cards
+                    for (let i = 0; i < this.stackCount; i++) {
+                        if (!this.deck.isEmpty()) {
+                            challengedPlayer.addCard(this.deck.draw());
+                        }
+                    }
+                    this.stackCount = 0;
+                    this.stackType = null;
+                    this.nextTurn();
                 }
-                this.nextTurn();
                 break;
 
             case 'Wild':
                 this.nextTurn();
+                this.stackCount = 0;
+                this.stackType = null;
                 break;
         }
 
@@ -327,6 +367,11 @@ class UnoGame {
             return { success: false, error: 'Not your turn' };
         }
 
+        // Limit to 1 card per turn
+        if (player.drawnThisTurn) {
+            return { success: false, error: 'You can only draw 1 card per turn' };
+        }
+
         if (this.deck.isEmpty()) {
             if (this.discardPile.length > 1) {
                 const topCard = this.discardPile.pop();
@@ -339,6 +384,7 @@ class UnoGame {
 
         const drawnCard = this.deck.draw();
         player.addCard(drawnCard);
+        player.drawnThisTurn = true;
 
         const canPlay = drawnCard.canPlayOn(this.getTopCard());
         if (!canPlay) {
@@ -372,7 +418,9 @@ class UnoGame {
                 name: p.name,
                 cardCount: p.hand.length,
                 isCurrentPlayer: this.gameStarted && p === this.getCurrentPlayer(),
-                socketId: p.socketId
+                socketId: p.socketId,
+                isMod: p.isMod,
+                isAdmin: p.isAdmin
             })),
             currentPlayerIndex: this.currentPlayerIndex,
             direction: this.direction,
@@ -380,8 +428,19 @@ class UnoGame {
             deckCount: this.deck ? this.deck.cards.length : 0,
             playerHand: player ? player.hand : [],
             waitingForColorChoice: this.waitingForColorChoice,
-            maxPlayers: this.maxPlayers
+            maxPlayers: this.maxPlayers,
+            stackCount: this.stackCount,
+            stackType: this.stackType
         };
+    }
+
+    nextTurn() {
+        // Reset draw flag for next turn
+        const currentPlayer = this.getCurrentPlayer();
+        if (currentPlayer) {
+            currentPlayer.drawnThisTurn = false;
+        }
+        this.currentPlayerIndex = (this.currentPlayerIndex + this.direction + this.players.length) % this.players.length;
     }
 }
 
@@ -725,6 +784,7 @@ io.on('connection', (socket) => {
         game.players.forEach(p => {
             p.hand = [];
             p.calledUno = false;
+            p.drawnThisTurn = false;
         });
 
         io.to(roomCode).emit('gameReset', {
@@ -734,6 +794,108 @@ io.on('connection', (socket) => {
             io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
         });
         console.log(`Admin reset game: ${roomCode}`);
+    });
+
+    // Chat system
+    socket.on('chatMessage', ({ roomCode, message }) => {
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const player = game.getPlayerBySocketId(socket.id);
+        if (!player) return;
+
+        const chatData = {
+            playerName: player.name,
+            message: message,
+            isAdmin: player.isAdmin,
+            isMod: player.isMod,
+            isSystem: false
+        };
+
+        io.to(roomCode).emit('chatMessage', chatData);
+    });
+
+    // Moderator promotion/demotion
+    socket.on('adminPromoteToMod', ({ roomCode, targetSocketId }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+        if (!targetPlayer) return;
+
+        targetPlayer.isMod = true;
+
+        io.to(roomCode).emit('playerPromoted', {
+            playerName: targetPlayer.name,
+            role: 'Moderator'
+        });
+
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+    });
+
+    socket.on('adminDemoteFromMod', ({ roomCode, targetSocketId }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+        if (!targetPlayer) return;
+
+        targetPlayer.isMod = false;
+
+        io.to(roomCode).emit('playerDemoted', {
+            playerName: targetPlayer.name
+        });
+
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+    });
+
+    socket.on('adminPromoteToAdmin', ({ roomCode, targetSocketId }) => {
+        if (!isUserAdmin) {
+            socket.emit('error', { message: 'Unauthorized: Admin only' });
+            return;
+        }
+
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+        if (!targetPlayer) return;
+
+        targetPlayer.isAdmin = true;
+        targetPlayer.isMod = false;
+
+        io.to(roomCode).emit('playerPromoted', {
+            playerName: targetPlayer.name,
+            role: 'Admin'
+        });
+
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+        });
+    });
+
+    socket.on('getGameState', ({ roomCode }) => {
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const player = game.getPlayerBySocketId(socket.id);
+        if (!player) return;
+
+        socket.emit('gameState', game.getGameState(socket.id));
     });
 
     socket.on('disconnect', () => {
