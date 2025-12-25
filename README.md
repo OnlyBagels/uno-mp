@@ -1,141 +1,168 @@
-# UNO Card Game - Networked Multiplayer
+# 🎮 Party Games Hub
 
-A real-time multiplayer UNO card game for 2-10 players. Players can join from different computers on the same network!
+A multiplayer party games platform featuring two exciting card games with shared authentication and real-time gameplay!
 
-## Features
+## 🎯 Games Included
 
-- **Real-time Multiplayer**: Play with 2-10 players from different computers
-- **Room System**: Create or join games using room codes
-- **Full UNO Rules**: All special cards (Skip, Reverse, Draw Two, Wild, Wild Draw Four)
-- **Clean Modern UI**: Beautiful gradient design with smooth animations
-- **UNO Call System**: Don't forget to call UNO when you have one card left!
+### 🃏 WildCard
+Fast-paced card game with special mechanics:
+- Card stacking (+2 on +2, +4 on +4)
+- LAST CARD calling system with penalties
+- Catch mechanic to call out rule violations
+- Emoji chat system
+- 2-10 players
+- 10-20 minute games
 
-## Setup Instructions
+### 😈 Awful Answers (18+)
+Adult party card game inspired by Cards Against Humanity:
+- Card Czar rotation system
+- Fill-in-the-blank prompts with hilarious answers
+- 200+ cards included
+- Anonymous answer judging
+- First to 7 points wins
+- 4-20 players
+- 30-90 minute games
 
-### 1. Install Node.js
-If you don't have Node.js installed, download it from https://nodejs.org/
+## 🚀 Quick Start
 
-### 2. Install Dependencies
-Open a terminal/command prompt in the game folder and run:
+### Installation
 ```bash
 npm install
 ```
 
-### 3. Start the Server
+### Running the Server
 ```bash
 npm start
 ```
 
-The server will start on port 3000. You'll see:
-```
-Server running on port 3000
-Players can connect at http://localhost:3000
-Or from other computers at http://YOUR_LOCAL_IP:3000
-```
+The hub will be available at `http://localhost:3000`
 
-### 4. Find Your Local IP Address
-
-**Windows:**
+### Development Mode
 ```bash
-ipconfig
-```
-Look for "IPv4 Address" (usually something like 192.168.1.X)
-
-**Mac/Linux:**
-```bash
-ifconfig
-```
-Look for "inet" under your network interface (usually something like 192.168.1.X)
-
-### 5. Connect Players
-
-**Host computer:**
-- Open browser and go to `http://localhost:3000`
-
-**Other players on the network:**
-- Open browser and go to `http://YOUR_LOCAL_IP:3000` (replace with actual IP from step 4)
-- Example: `http://192.168.1.100:3000`
-
-## How to Play
-
-### Starting a Game
-
-1. **First Player (Host):**
-   - Enter your name
-   - Select max number of players
-   - Click "Create Game"
-   - Share the room code with other players
-
-2. **Other Players:**
-   - Enter your name
-   - Enter the room code shared by the host
-   - Click "Join Game"
-
-3. **Start Playing:**
-   - Once all players have joined, the host clicks "Start Game"
-   - Players take turns playing cards
-
-### Game Rules
-
-- Match cards by **color** or **number**
-- **Special Cards:**
-  - **Skip**: Next player loses their turn
-  - **Reverse**: Reverses the direction of play
-  - **Draw Two**: Next player draws 2 cards and loses their turn
-  - **Wild**: Play on any card, choose the color
-  - **Wild Draw Four**: Next player draws 4 cards and loses their turn
-
-- **UNO Rule:**
-  - Call "UNO" when you have 2 cards left (before playing your second-to-last card)
-  - Penalty: Draw 2 cards if you forget
-
-- **Winning:**
-  - First player to play all their cards wins!
-
-## Gameplay
-
-- Click on a card in your hand to play it
-- Click "Draw Card" if you can't play
-- Click "UNO!" button when you have 2 cards left
-- Wild cards will prompt you to choose a color
-
-## Troubleshooting
-
-**Can't connect from another computer?**
-- Make sure all computers are on the same WiFi network
-- Check your firewall settings (may need to allow port 3000)
-- Verify you're using the correct IP address
-
-**Game crashes or disconnects?**
-- Refresh the page to reconnect
-- If a player leaves, the game continues with remaining players
-
-**Port 3000 already in use?**
-- Edit server.js and change the PORT variable to another number (e.g., 3001)
-
-## Technologies Used
-
-- **Backend**: Node.js, Express, Socket.io
-- **Frontend**: HTML5, CSS3, JavaScript
-- **Real-time Communication**: WebSocket (via Socket.io)
-
-## File Structure
-
-```
-IDK bro/
-├── server.js          # Server-side game logic
-├── client.js          # Client-side UI and networking
-├── index.html         # Game interface
-├── styles.css         # Game styling
-├── package.json       # Dependencies
-└── README.md          # This file
+npm run dev
 ```
 
-## Tips for Best Experience
+## 🎮 How to Play
 
-- Use a stable WiFi connection
-- Keep the server running while people are playing
-- Don't refresh the page during a game (you'll disconnect)
-- Share the room code via text/chat before starting
+### Getting Started
+1. Visit the homepage
+2. **Register** an account, **Login**, or play as **Guest**
+3. Choose your game: **WildCard** or **Awful Answers**
+4. Create a room or join with a room code
+5. Invite friends by sharing the room code!
 
-Enjoy playing UNO with your friends!
+### WildCard Rules
+- Match cards by color or number
+- Stack draw cards to pass them to the next player
+- Call "LAST CARD" when you have 2 cards left
+- Other players can "Catch" you if you forget!
+- First player to empty their hand wins
+
+### Awful Answers Rules
+- One player is the **Card Czar** each round
+- Card Czar reads a **Black Card** (prompt)
+- Other players submit their funniest **White Card(s)** (answers)
+- Card Czar picks the funniest answer
+- Winner gets 1 Awesome Point
+- First to 7 points wins the game!
+
+## 📁 Project Structure
+
+```
+party-games-hub/
+├── public/              # Homepage and game hub
+│   ├── index.html       # Main landing page
+│   ├── client.js        # Hub client logic
+│   └── styles.css       # Hub styling
+├── wildcard/            # WildCard game
+│   ├── index.html       # Game UI
+│   ├── client.js        # Client-side game logic
+│   ├── game.js          # Game rules and mechanics
+│   ├── wildcard-server.js # Server handlers (legacy)
+│   └── styles.css       # Game styling
+├── awful-answers/       # Awful Answers game
+│   ├── index.html       # Game UI
+│   ├── client.js        # Client-side game logic
+│   ├── game.js          # Game logic (Card Czar, voting)
+│   ├── server.js        # Server handlers
+│   ├── cards.js         # Card database (50+ prompts, 200+ answers)
+│   └── styles.css       # Game styling
+├── shared/              # Shared resources
+│   ├── auth.js          # Authentication system
+│   └── database.js      # Database utilities
+├── server.js            # Main server (routing and auth)
+└── package.json         # Dependencies
+```
+
+## 🔧 Technical Stack
+
+- **Backend**: Node.js, Express.js, Socket.io
+- **Frontend**: Vanilla JavaScript, HTML5, CSS3
+- **Authentication**: In-memory user system
+- **Real-time**: WebSocket communication via Socket.io
+
+## 🌟 Features
+
+### Shared Features
+- ✅ Unified authentication system
+- ✅ Guest play (no account required)
+- ✅ Room code system with optional passwords
+- ✅ Real-time multiplayer
+- ✅ Responsive design
+- ✅ Notification system
+- ✅ Chat functionality (WildCard)
+
+### WildCard Features
+- ✅ Card draw stacking mechanics
+- ✅ LAST CARD penalty system
+- ✅ Catch button with cooldown
+- ✅ Custom card colors and gradients
+- ✅ Clickable deck for drawing
+- ✅ Emoji picker for chat
+
+### Awful Answers Features
+- ✅ Card Czar rotation
+- ✅ Anonymous answer judging
+- ✅ Pick 2/Pick 3 card support
+- ✅ Score tracking
+- ✅ Winner celebration
+- ✅ 200+ original cards
+
+## 🎨 Customization
+
+### WildCard
+Players can customize their experience:
+- Card colors (Red, Blue, Green, Yellow)
+- Background gradients
+- Settings persist in localStorage
+
+## 📝 Default Login
+
+- **Username**: `admin`
+- **Password**: `admin`
+
+Or create your own account or play as guest!
+
+## 🤝 Multiplayer
+
+Both games support multiple simultaneous rooms:
+- Each room has a unique 4-letter code
+- Optional password protection
+- Host controls game start
+- Players can join mid-lobby
+
+## 🐛 Known Issues
+
+None currently! Report issues on GitHub.
+
+## 📄 License
+
+MIT
+
+## 🎉 Credits
+
+Created with [Claude Code](https://claude.com/claude-code)
+
+---
+
+**Have fun and play responsibly! Remember: Awful Answers is for adults 17+ only.**
