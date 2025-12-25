@@ -9,40 +9,8 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
-    <!-- Account Login Screen -->
-    <div id="accountScreen" class="screen">
-        <div class="login-container">
-            <h1>Wild Draw</h1>
-            <div class="account-tabs">
-                <button id="loginTabBtn" class="tab-btn active">Login</button>
-                <button id="registerTabBtn" class="tab-btn">Register</button>
-            </div>
-
-            <!-- Login Tab -->
-            <div id="loginTab" class="tab-content active">
-                <div class="account-form">
-                    <input type="text" id="loginUsername" placeholder="Username" maxlength="20" autocomplete="username">
-                    <input type="password" id="loginPassword" placeholder="Password" maxlength="50" autocomplete="current-password">
-                    <button id="loginBtn" class="btn btn-primary">Login</button>
-                    <div class="divider-small">OR</div>
-                    <button id="guestBtn" class="btn btn-secondary">Continue as Guest</button>
-                </div>
-            </div>
-
-            <!-- Register Tab -->
-            <div id="registerTab" class="tab-content">
-                <div class="account-form">
-                    <input type="text" id="registerUsername" placeholder="Username" maxlength="20" autocomplete="username">
-                    <input type="password" id="registerPassword" placeholder="Password" maxlength="50" autocomplete="new-password">
-                    <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password" maxlength="50" autocomplete="new-password">
-                    <button id="registerBtn" class="btn btn-primary">Create Account</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Lobby Selection Screen -->
-    <div id="loginScreen" class="screen hidden">
+    <div id="loginScreen" class="screen">
         <div class="login-container">
             <h1>Wild Draw</h1>
             <div class="user-info-bar">
@@ -331,6 +299,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="auth-init.js"></script>
     <script src="client.js"></script>
 </body>
 </html>

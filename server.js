@@ -156,11 +156,20 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.get('/wildcard', (req, res) => {
+// Middleware to check if user is logged in
+function requireAuth(req, res, next) {
+    if (req.isAuthenticated() || req.session.user) {
+        next();
+    } else {
+        res.redirect('/?error=login_required');
+    }
+}
+
+app.get('/wildcard', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'wildcard', 'index.html'));
 });
 
-app.get('/awful-answers', (req, res) => {
+app.get('/awful-answers', requireAuth, (req, res) => {
     res.sendFile(path.join(__dirname, 'awful-answers', 'index.html'));
 });
 

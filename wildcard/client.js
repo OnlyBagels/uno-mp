@@ -14,7 +14,6 @@ let hasCaughtThisTurn = false;
 let lastCurrentPlayerSocketId = null; // Track when a full round completes
 
 // DOM Elements - Screens
-const accountScreen = document.getElementById('accountScreen');
 const loginScreen = document.getElementById('loginScreen');
 const lobbyScreen = document.getElementById('lobbyScreen');
 const gameScreen = document.getElementById('gameScreen');
@@ -406,34 +405,7 @@ document.querySelectorAll('.color-btn').forEach(btn => {
     });
 });
 
-// Check for stored session on page load
-window.addEventListener('DOMContentLoaded', () => {
-    const storedSession = localStorage.getItem('wildDrawSession');
-    if (storedSession) {
-        try {
-            const session = JSON.parse(storedSession);
-
-            if (session.isGuest) {
-                // Restore guest session
-                currentUser = session;
-                accountScreen.classList.add('hidden');
-                loginScreen.classList.remove('hidden');
-                document.getElementById('usernameDisplay').textContent = `Guest: ${session.username}`;
-                playerNameInput.value = session.username;
-                playerNameInput.readOnly = true;
-            } else {
-                // Auto-login with stored credentials
-                socket.emit('login', {
-                    username: session.username,
-                    password: session.password
-                });
-            }
-        } catch (e) {
-            console.error('Failed to restore session:', e);
-            localStorage.removeItem('wildDrawSession');
-        }
-    }
-});
+// Session check handled by auth-init.js
 
 // Socket.io event handlers
 socket.on('connect', () => {
