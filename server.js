@@ -73,7 +73,7 @@ class Card {
     }
 
     isSpecial() {
-        return ['Skip', 'Reverse', 'Draw Two', 'Wild', 'Wild Draw Four'].includes(this.value);
+        return ['Skip', 'Reverse', 'Draw Two', 'Wild', 'Wild Draw Four', 'Wild Swap Hands', 'Wild Shuffle Hands'].includes(this.value);
     }
 }
 
@@ -100,6 +100,10 @@ class Deck {
             this.cards.push(new Card('wild', 'Wild'));
             this.cards.push(new Card('wild', 'Wild Draw Four'));
         }
+
+        // Add special wild cards (1 each per deck)
+        this.cards.push(new Card('wild', 'Wild Swap Hands'));
+        this.cards.push(new Card('wild', 'Wild Shuffle Hands'));
     }
 
     shuffle() {
@@ -162,13 +166,16 @@ class UnoGame {
         this.discardPile = [];
         this.gameStarted = false;
         this.waitingForColorChoice = false;
+        this.waitingForPlayerChoice = false; // For Wild Swap Hands
         this.pendingCard = null;
+        this.pendingPlayerChoice = null; // Store player who played Swap Hands
         this.stackCount = 0; // Track stacked draw cards
         this.stackType = null; // 'draw2' or 'draw4'
         this.password = password; // Room password (null if no password)
         this.creatorName = creatorName; // Name of player who created the room
         this.creatorSocketId = creatorSocketId; // Socket ID of the creator
         this.createdAt = Date.now(); // Timestamp when room was created
+        this.unoPenaltyQueue = []; // Track players who need UNO penalty
     }
 
     addPlayer(socketId, name) {
@@ -278,6 +285,11 @@ class UnoGame {
             return { success: true, winner: player.name };
         }
 
+        // If player doesn't have exactly 1 card anymore, reset UNO status
+        if (player.hand.length !== 1) {
+            player.calledUno = false;
+        }
+
         if (card.isSpecial()) {
             this.handleSpecialCard(card);
         } else {
@@ -357,6 +369,43 @@ class UnoGame {
                 this.stackCount = 0;
                 this.stackType = null;
                 break;
+
+            case 'Wild Swap Hands':
+                // Player will choose who to swap with - don't advance turn yet
+                this.waitingForPlayerChoice = true;
+                this.stackCount = 0;
+                this.stackType = null;
+                break;
+
+            case 'Wild Shuffle Hands':
+                // Collect all cards from all players
+                const allCards = [];
+                this.players.forEach(player => {
+                    allCards.push(...player.hand);
+                    player.hand = [];
+                    player.calledUno = false;
+                });
+
+                // Shuffle all cards
+                for (let i = allCards.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [allCards[i], allCards[j]] = [allCards[j], allCards[i]];
+                }
+
+                // Redistribute cards starting from player to the left
+                let currentIndex = (this.currentPlayerIndex + this.direction + this.players.length) % this.players.length;
+                let cardIndex = 0;
+
+                while (cardIndex < allCards.length) {
+                    this.players[currentIndex].hand.push(allCards[cardIndex]);
+                    cardIndex++;
+                    currentIndex = (currentIndex + this.direction + this.players.length) % this.players.length;
+                }
+
+                this.nextTurn();
+                this.stackCount = 0;
+                this.stackType = null;
+                break;
         }
 
         if (this.deck.isEmpty() && this.discardPile.length > 1) {
@@ -405,11 +454,40 @@ class UnoGame {
             return false;
         }
 
-        if (player.hand.length === 2) {
+        // Allow calling UNO when player has 1 or 2 cards
+        // (2 cards when about to play a card, 1 card after playing)
+        if (player.hand.length === 1 || player.hand.length === 2) {
             player.calledUno = true;
             return true;
         }
         return false;
+    }
+
+    swapHands(currentPlayerSocketId, targetPlayerSocketId) {
+        const currentPlayer = this.getPlayerBySocketId(currentPlayerSocketId);
+        const targetPlayer = this.getPlayerBySocketId(targetPlayerSocketId);
+
+        if (!currentPlayer || !targetPlayer || currentPlayer === targetPlayer) {
+            return { success: false, error: 'Invalid player selection' };
+        }
+
+        // Swap hands
+        const tempHand = currentPlayer.hand;
+        currentPlayer.hand = targetPlayer.hand;
+        targetPlayer.hand = tempHand;
+
+        // Reset UNO status for both players
+        currentPlayer.calledUno = false;
+        targetPlayer.calledUno = false;
+
+        // No longer waiting for player choice
+        this.waitingForPlayerChoice = false;
+        this.pendingPlayerChoice = null;
+
+        // Advance turn
+        this.nextTurn();
+
+        return { success: true };
     }
 
     getGameState(forSocketId = null) {
@@ -433,6 +511,7 @@ class UnoGame {
             deckCount: this.deck ? this.deck.cards.length : 0,
             playerHand: player ? player.hand : [],
             waitingForColorChoice: this.waitingForColorChoice,
+            waitingForPlayerChoice: this.waitingForPlayerChoice,
             maxPlayers: this.maxPlayers,
             stackCount: this.stackCount,
             stackType: this.stackType,
@@ -441,8 +520,27 @@ class UnoGame {
     }
 
     nextTurn() {
-        // Reset draw flag for next turn
+        // Check if previous player has 1 card and didn't call UNO
         const currentPlayer = this.getCurrentPlayer();
+        if (currentPlayer && currentPlayer.hand.length === 1 && !currentPlayer.calledUno) {
+            // Apply UNO penalty - draw 2 cards
+            for (let i = 0; i < 2; i++) {
+                if (!this.deck.isEmpty()) {
+                    currentPlayer.addCard(this.deck.draw());
+                } else if (this.discardPile.length > 1) {
+                    const topCard = this.discardPile.pop();
+                    this.deck.addCards(this.discardPile);
+                    this.discardPile = [topCard];
+                    currentPlayer.addCard(this.deck.draw());
+                }
+            }
+            this.unoPenaltyQueue.push({
+                playerName: currentPlayer.name,
+                reason: 'Did not call UNO'
+            });
+        }
+
+        // Reset draw flag for next turn
         if (currentPlayer) {
             currentPlayer.drawnThisTurn = false;
         }
@@ -677,6 +775,17 @@ io.on('connection', (socket) => {
                 // Update lobby list
                 io.emit('lobbyListUpdate', getPublicLobbies());
             } else {
+                // Check if any UNO penalties were applied and broadcast them
+                if (game.unoPenaltyQueue.length > 0) {
+                    game.unoPenaltyQueue.forEach(penalty => {
+                        io.to(roomCode).emit('unoPenalty', {
+                            playerName: penalty.playerName,
+                            reason: penalty.reason
+                        });
+                    });
+                    game.unoPenaltyQueue = [];
+                }
+
                 game.players.forEach(player => {
                     io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
                 });
@@ -724,6 +833,44 @@ io.on('connection', (socket) => {
         if (game.callUno(socket.id)) {
             const player = game.getPlayerBySocketId(socket.id);
             io.to(roomCode).emit('unoCalled', { playerName: player.name });
+        }
+    });
+
+    socket.on('swapHands', ({ roomCode, targetSocketId, chosenColor }) => {
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const currentPlayer = game.getPlayerBySocketId(socket.id);
+        const targetPlayer = game.getPlayerBySocketId(targetSocketId);
+
+        if (!game.waitingForPlayerChoice) {
+            socket.emit('error', { message: 'Not waiting for player selection' });
+            return;
+        }
+
+        if (game.getCurrentPlayer() !== currentPlayer) {
+            socket.emit('error', { message: 'Not your turn' });
+            return;
+        }
+
+        // Set the wild card color if provided
+        if (chosenColor && game.discardPile.length > 0) {
+            game.discardPile[game.discardPile.length - 1].color = chosenColor;
+        }
+
+        const result = game.swapHands(socket.id, targetSocketId);
+
+        if (result.success) {
+            // Send updated game state to all players
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+            });
+            io.to(roomCode).emit('handsSwapped', {
+                player1: currentPlayer.name,
+                player2: targetPlayer.name
+            });
+        } else {
+            socket.emit('error', { message: result.error });
         }
     });
 

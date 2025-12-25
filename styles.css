@@ -1013,6 +1013,109 @@ h1 {
     transform: scale(1.05);
 }
 
+/* UNO Popup */
+.uno-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: linear-gradient(135deg, #ffd700 0%, #ff8c00 100%);
+    padding: 40px 60px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(255, 140, 0, 0.6);
+    z-index: 1000;
+    text-align: center;
+    border: 5px solid #ff6b00;
+    animation: unoPopIn 0.3s ease-out;
+}
+
+.uno-popup-content {
+    color: white;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+}
+
+.uno-popup-content #unoPlayerName {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 10px;
+}
+
+.uno-popup-content .uno-text {
+    font-size: 4rem;
+    letter-spacing: 8px;
+    display: block;
+    animation: pulse 0.5s ease-in-out infinite;
+}
+
+@keyframes unoPopIn {
+    from {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1);
+    }
+}
+
+/* Player Chooser */
+.player-chooser {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 30px;
+    border-radius: 15px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    z-index: 100;
+    text-align: center;
+    min-width: 400px;
+}
+
+.player-chooser h3 {
+    margin-bottom: 20px;
+    color: #1e3c72;
+    font-size: 1.3rem;
+}
+
+.player-options {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.player-option-btn {
+    padding: 15px 25px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border: 2px solid #1e3c72;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.player-option-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.player-option-btn:active {
+    transform: translateY(0);
+}
+
 /* Notification System */
 .notification-container {
     position: fixed;

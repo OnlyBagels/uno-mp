@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Wild Draw - Multiplayer Card Game</title>
     <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
 </head>
 <body>
@@ -159,6 +160,11 @@
                             <button class="color-btn yellow" data-color="yellow"></button>
                         </div>
                     </div>
+
+                    <div class="player-chooser hidden" id="playerChooser">
+                        <h3>Choose a Player to Swap Hands With</h3>
+                        <div id="playerOptions" class="player-options"></div>
+                    </div>
                 </div>
 
                 <div class="player-area">
@@ -180,6 +186,14 @@
 
     <!-- Notification System -->
     <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- UNO Popup Notification -->
+    <div id="unoPopup" class="uno-popup hidden">
+        <div class="uno-popup-content">
+            <span id="unoPlayerName"></span> called<br>
+            <span class="uno-text">ONE CARD!</span>
+        </div>
+    </div>
 
     <!-- Admin Menu Modal -->
     <div id="adminMenuModal" class="modal hidden">

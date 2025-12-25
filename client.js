@@ -476,6 +476,36 @@ socket.on('gameStarted', ({ message, currentPlayer }) => {
 socket.on('gameState', (gameState) => {
     renderGame(gameState);
     updateAdminPlayersList(gameState.players);
+
+    // Handle player chooser for Wild Swap Hands
+    const playerChooser = document.getElementById('playerChooser');
+    if (playerChooser) {
+        if (gameState.waitingForPlayerChoice) {
+            playerChooser.classList.remove('hidden');
+
+            // Populate player options
+            const playerOptions = document.getElementById('playerOptions');
+            if (playerOptions) {
+                playerOptions.innerHTML = '';
+
+                gameState.players.forEach(player => {
+                    // Don't show current player as an option
+                    if (player.socketId !== mySocketId) {
+                        const button = document.createElement('button');
+                        button.className = 'btn player-select-btn';
+                        button.textContent = player.name;
+                        button.dataset.socketId = player.socketId;
+                        button.addEventListener('click', () => {
+                            handlePlayerSelection(player.socketId, gameState.pendingColor);
+                        });
+                        playerOptions.appendChild(button);
+                    }
+                });
+            }
+        } else {
+            playerChooser.classList.add('hidden');
+        }
+    }
 });
 
 socket.on('chooseColor', () => {
@@ -520,6 +550,29 @@ socket.on('unoCalled', ({ playerName: unoPlayerName }) => {
             unoBtn.classList.remove('btn-uno-active');
         }, 1000);
     }
+
+    // Show UNO popup to all players
+    const unoPopup = document.getElementById('unoPopup');
+    const unoPlayerNameElement = document.getElementById('unoPlayerName');
+    if (unoPopup && unoPlayerNameElement) {
+        unoPlayerNameElement.textContent = unoPlayerName;
+        unoPopup.classList.remove('hidden');
+
+        // Auto-hide after 3 seconds
+        setTimeout(() => {
+            unoPopup.classList.add('hidden');
+        }, 3000);
+    }
+});
+
+socket.on('handsSwapped', ({ player1, player2 }) => {
+    updateMessage(`${player1} and ${player2} swapped hands!`);
+    showNotification(`${player1} and ${player2} swapped hands!`, 'info');
+});
+
+socket.on('unoPenalty', ({ playerName }) => {
+    updateMessage(`${playerName} drew 2 cards for not calling UNO!`);
+    showNotification(`${playerName} drew 2 cards for not calling UNO!`, 'warning');
 });
 
 socket.on('gameOver', ({ winner }) => {
@@ -737,6 +790,14 @@ function createCardElement(card) {
         displayValue = 'Wild<br>+4';
     } else if (card.value === 'Draw Two') {
         displayValue = '+2';
+    } else if (card.value === 'Skip') {
+        displayValue = '<i class="fa-solid fa-ban"></i><br>Skip';
+    } else if (card.value === 'Reverse') {
+        displayValue = '<i class="fa-solid fa-rotate"></i><br>Reverse';
+    } else if (card.value === 'Wild Swap Hands') {
+        displayValue = '<i class="fa-solid fa-arrow-right-arrow-left"></i><br>Swap Hands';
+    } else if (card.value === 'Wild Shuffle Hands') {
+        displayValue = '<i class="fa-solid fa-shuffle"></i><br>Shuffle';
     }
 
     cardDiv.innerHTML = `<span class="card-value">${displayValue}</span>`;
@@ -768,6 +829,20 @@ function handleColorChoice(color) {
     colorChooser.classList.add('hidden');
     pendingColorChoice = false;
     pendingCardIndex = null;
+}
+
+function handlePlayerSelection(targetSocketId, chosenColor) {
+    socket.emit('swapHands', {
+        roomCode: currentRoomCode,
+        targetSocketId: targetSocketId,
+        chosenColor: chosenColor
+    });
+
+    // Hide player chooser
+    const playerChooser = document.getElementById('playerChooser');
+    if (playerChooser) {
+        playerChooser.classList.add('hidden');
+    }
 }
 
 function updateGameInfo(gameState) {
