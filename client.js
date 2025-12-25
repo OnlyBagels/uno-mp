@@ -487,13 +487,8 @@ socket.on('chooseColor', () => {
 socket.on('cardPlayed', ({ playerName: playedPlayerName, currentPlayer, cardIndex }) => {
     updateMessage(`${playedPlayerName} played a card. ${currentPlayer}'s turn!`);
 
-    // Trigger animation for the player who played the card
-    if (playedPlayerName === playerName && cardIndex !== undefined) {
-        const cards = playerHand.querySelectorAll('.card');
-        if (cards[cardIndex]) {
-            cards[cardIndex].classList.add('card-playing');
-        }
-    }
+    // Animation is now handled by the gameState update
+    // Removed manual animation trigger to prevent card disappearing bug
 });
 
 socket.on('cardDrawn', ({ card, canPlay }) => {
