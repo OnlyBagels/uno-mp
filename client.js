@@ -77,6 +77,102 @@ function generateGuestName() {
     return `${color}${animal}${object}`;
 }
 
+// Winner effects - Confetti explosion
+function playWinnerEffects() {
+    // Create AudioContext for sound (using Web Audio API)
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Play victory fanfare sound
+    playVictorySound(audioContext);
+
+    // Confetti burst
+    const duration = 3000;
+    const end = Date.now() + duration;
+
+    const colors = ['#FFD700', '#FFA500', '#FF69B4', '#00FF00', '#00BFFF'];
+
+    (function frame() {
+        confetti({
+            particleCount: 7,
+            angle: 60,
+            spread: 55,
+            origin: { x: 0 },
+            colors: colors
+        });
+        confetti({
+            particleCount: 7,
+            angle: 120,
+            spread: 55,
+            origin: { x: 1 },
+            colors: colors
+        });
+
+        if (Date.now() < end) {
+            requestAnimationFrame(frame);
+        }
+    }());
+}
+
+// Loser effects - Sad trombone
+function playLoserEffects() {
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    playSadTromboneSound(audioContext);
+}
+
+// Victory sound (triumphant notes)
+function playVictorySound(audioContext) {
+    const notes = [
+        { freq: 523.25, time: 0, duration: 0.2 },    // C5
+        { freq: 659.25, time: 0.2, duration: 0.2 },  // E5
+        { freq: 783.99, time: 0.4, duration: 0.2 },  // G5
+        { freq: 1046.50, time: 0.6, duration: 0.4 }  // C6
+    ];
+
+    notes.forEach(note => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = note.freq;
+        oscillator.type = 'triangle';
+
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + note.time);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.time + note.duration);
+
+        oscillator.start(audioContext.currentTime + note.time);
+        oscillator.stop(audioContext.currentTime + note.time + note.duration);
+    });
+}
+
+// Sad trombone sound (descending notes)
+function playSadTromboneSound(audioContext) {
+    const notes = [
+        { freq: 392.00, time: 0, duration: 0.3 },    // G4
+        { freq: 369.99, time: 0.3, duration: 0.3 },  // F#4
+        { freq: 349.23, time: 0.6, duration: 0.3 },  // F4
+        { freq: 293.66, time: 0.9, duration: 0.5 }   // D4
+    ];
+
+    notes.forEach(note => {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+
+        oscillator.frequency.value = note.freq;
+        oscillator.type = 'sawtooth';
+
+        gainNode.gain.setValueAtTime(0.2, audioContext.currentTime + note.time);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + note.time + note.duration);
+
+        oscillator.start(audioContext.currentTime + note.time);
+        oscillator.stop(audioContext.currentTime + note.time + note.duration);
+    });
+}
+
 // Account Screen Tab Switching
 document.getElementById('loginTabBtn').addEventListener('click', () => {
     document.getElementById('loginTab').classList.add('active');
@@ -433,7 +529,17 @@ socket.on('unoCalled', ({ playerName: unoPlayerName }) => {
 
 socket.on('gameOver', ({ winner }) => {
     updateMessage(`🎉 ${winner} wins the game! 🎉`);
-    showNotification(`🎉 ${winner} wins! Returning to lobby...`, 'success', 5000);
+
+    // Check if current player is the winner
+    if (winner === playerName) {
+        // Winner effects: Confetti!
+        showNotification(`🎉 You won! Congratulations! 🎉`, 'success', 5000);
+        playWinnerEffects();
+    } else {
+        // Loser effects: Sad horn
+        showNotification(`${winner} wins! Better luck next time!`, 'info', 5000);
+        playLoserEffects();
+    }
 
     setTimeout(() => {
         // Return to lobby screen
