@@ -78,20 +78,8 @@ document.getElementById('registerBtn').addEventListener('click', () => {
 
 // Guest Login
 document.getElementById('guestBtn').addEventListener('click', () => {
-    const username = document.getElementById('guestUsername').value.trim();
-
-    if (!username) {
-        showNotification('Please enter a username', 'warning');
-        return;
-    }
-
-    socket.emit('guestLogin', { username });
-});
-
-document.getElementById('guestUsername').addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') {
-        document.getElementById('guestBtn').click();
-    }
+    // No username input needed - server generates random name
+    socket.emit('guestLogin');
 });
 
 // Logout
@@ -146,6 +134,31 @@ socket.on('registerResult', ({ success, message }) => {
 function selectGame(gameType) {
     // Redirect to game
     window.location.href = `/${gameType}`;
+}
+
+// Check for OAuth success
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.get('oauth') === 'success') {
+    // User logged in via OAuth, fetch their data
+    fetch('/auth/user')
+        .then(res => res.json())
+        .then(data => {
+            if (data.user) {
+                currentUser = data.user;
+                showNotification(`Welcome, ${data.user.username}!`, 'success');
+                accountScreen.classList.add('hidden');
+                gameSelectionScreen.classList.remove('hidden');
+                usernameDisplay.textContent = data.user.username;
+                if (data.user.isDiscord) {
+                    usernameDisplay.textContent += ' (Discord)';
+                } else if (data.user.isGoogle) {
+                    usernameDisplay.textContent += ' (Google)';
+                }
+            }
+        });
+
+    // Clean up URL
+    window.history.replaceState({}, document.title, '/');
 }
 
 // Auto-login on page load

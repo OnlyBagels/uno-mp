@@ -181,6 +181,59 @@ body {
     transform: translateY(-2px);
 }
 
+.btn-discord {
+    width: 100%;
+    background: #5865F2;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-decoration: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-discord:hover {
+    background: #4752C4;
+    transform: translateY(-2px);
+}
+
+.btn-discord svg {
+    width: 24px;
+    height: 24px;
+}
+
+.btn-google {
+    width: 100%;
+    background: white;
+    color: #3c4043;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-decoration: none;
+    padding: 15px 30px;
+    border-radius: 10px;
+    font-weight: 600;
+    transition: all 0.2s ease;
+    border: 2px solid #dadce0;
+    margin-top: 10px;
+}
+
+.btn-google:hover {
+    background: #f8f9fa;
+    border-color: #c5c7ca;
+    transform: translateY(-2px);
+}
+
+.btn-google svg {
+    width: 24px;
+    height: 24px;
+}
+
 .btn-secondary {
     background: rgba(255, 255, 255, 0.2);
     color: white;
@@ -189,6 +242,13 @@ body {
 
 .btn-secondary:hover {
     background: rgba(255, 255, 255, 0.3);
+}
+
+.guest-note {
+    color: #f59e0b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-top: 10px;
 }
 
 /* Games Grid */
