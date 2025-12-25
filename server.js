@@ -473,20 +473,34 @@ io.on('connection', (socket) => {
     console.log('A user connected:', socket.id);
 
     const clientIp = socket.handshake.address;
-    const isUserAdmin = isAdmin(clientIp, null);
-    const userPermissions = getAdminPermissions(clientIp, null);
 
-    // Send admin status to client
+    // User session storage
+    let userSession = null;
+
+    // Helper function to check if current user is admin
+    const isUserAdmin = () => {
+        if (userSession && userSession.isAdmin) {
+            return true;
+        }
+        return isAdmin(clientIp, null);
+    };
+
+    // Helper function to get user permissions
+    const getUserPermissions = () => {
+        if (userSession && userSession.isAdmin) {
+            return ['kick', 'skip', 'view_hands', 'change_color', 'end_game', 'reset_game'];
+        }
+        return getAdminPermissions(clientIp, null);
+    };
+
+    // Send initial admin status to client
     socket.emit('adminStatus', {
-        isAdmin: isUserAdmin,
-        permissions: userPermissions
+        isAdmin: isUserAdmin(),
+        permissions: getUserPermissions()
     });
 
     // Send initial lobby list
     socket.emit('lobbyListUpdate', getPublicLobbies());
-
-    // User session storage
-    let userSession = null;
 
     // Login handler
     socket.on('login', ({ username, password }) => {
@@ -715,7 +729,7 @@ io.on('connection', (socket) => {
 
     // Admin Commands
     socket.on('adminKickPlayer', ({ roomCode, targetSocketId }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -740,7 +754,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminEndGame', ({ roomCode }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -754,7 +768,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminSkipTurn', ({ roomCode }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -795,7 +809,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminForceStart', ({ roomCode }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -821,7 +835,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminRegisterUser', ({ username, password, isAdmin: makeAdmin }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -843,7 +857,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminListUsers', () => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -855,7 +869,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminChangeColor', ({ roomCode, color }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -877,7 +891,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminRedrawCards', ({ roomCode, targetSocketId, count }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -903,7 +917,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminResetGame', ({ roomCode }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -952,7 +966,7 @@ io.on('connection', (socket) => {
 
     // Moderator promotion/demotion
     socket.on('adminPromoteToMod', ({ roomCode, targetSocketId }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -976,7 +990,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminDemoteFromMod', ({ roomCode, targetSocketId }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -999,7 +1013,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminPromoteToAdmin', ({ roomCode, targetSocketId }) => {
-        if (!isUserAdmin) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
