@@ -1089,6 +1089,50 @@ h1 {
     }
 }
 
+/* Catch Popup */
+.catch-popup {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    padding: 40px 60px;
+    border-radius: 20px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+    z-index: 1000;
+    text-align: center;
+    border: 5px solid;
+    animation: catchPopIn 0.3s ease-out;
+}
+
+.catch-popup.success {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-color: #991b1b;
+}
+
+.catch-popup.fail {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border-color: #1e40af;
+}
+
+.catch-popup-content {
+    color: white;
+    text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
+    font-weight: bold;
+    font-size: 2rem;
+    line-height: 1.5;
+}
+
+@keyframes catchPopIn {
+    from {
+        transform: translate(-50%, -50%) scale(0) rotate(-180deg);
+        opacity: 0;
+    }
+    to {
+        transform: translate(-50%, -50%) scale(1) rotate(0deg);
+        opacity: 1;
+    }
+}
+
 @keyframes pulse {
     0%, 100% {
         transform: scale(1);

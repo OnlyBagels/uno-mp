@@ -10,6 +10,8 @@ let pendingCardIndex = null;
 let isAdmin = false;
 let adminPermissions = [];
 let currentUser = null;
+let hasCaughtThisTurn = false;
+let lastCurrentPlayerSocketId = null; // Track when a full round completes
 
 // DOM Elements - Screens
 const accountScreen = document.getElementById('accountScreen');
@@ -576,14 +578,31 @@ socket.on('lastCardPenalty', ({ playerName, cards, reason }) => {
 });
 
 socket.on('lastCardCaught', ({ success, callerName, targetName, cards }) => {
-    if (success) {
-        const message = `${callerName} caught ${targetName} for not calling LAST CARD! ${targetName} drew ${cards} cards`;
-        updateMessage(message);
-        showNotification(message, 'warning');
-    } else {
-        const message = `${callerName} made a false accusation and drew ${cards} cards!`;
-        updateMessage(message);
-        showNotification(message, 'error');
+    const catchPopup = document.getElementById('catchPopup');
+    const catchMessage = document.getElementById('catchMessage');
+
+    if (catchPopup && catchMessage) {
+        // Remove previous success/fail classes
+        catchPopup.classList.remove('success', 'fail');
+
+        if (success) {
+            const message = `${callerName} caught ${targetName}!<br><span style="font-size: 1.5rem;">+${cards} cards penalty</span>`;
+            updateMessage(`${callerName} caught ${targetName} for not calling LAST CARD! ${targetName} drew ${cards} cards`);
+            catchMessage.innerHTML = message;
+            catchPopup.classList.add('success');
+        } else {
+            const message = `False accusation!<br>${callerName} drew ${cards} cards`;
+            updateMessage(`${callerName} made a false accusation and drew ${cards} cards!`);
+            catchMessage.innerHTML = message;
+            catchPopup.classList.add('fail');
+        }
+
+        catchPopup.classList.remove('hidden');
+
+        // Auto-hide after 4 seconds
+        setTimeout(() => {
+            catchPopup.classList.add('hidden');
+        }, 4000);
     }
 });
 
@@ -863,17 +882,29 @@ function handlePlayerSelection(targetSocketId, chosenColor) {
 }
 
 window.catchPlayer = function(targetSocketId, targetName) {
+    if (hasCaughtThisTurn) {
+        showNotification('You can only catch once per turn!', 'warning');
+        return;
+    }
+
     if (confirm(`Catch ${targetName} for not calling LAST CARD?`)) {
         socket.emit('catchLastCard', {
             roomCode: currentRoomCode,
             targetSocketId: targetSocketId
         });
+        hasCaughtThisTurn = true;
     }
 };
 
 function updateGameInfo(gameState) {
     const currentPlayer = gameState.players.find(p => p.isCurrentPlayer);
     if (currentPlayer) {
+        // Reset catch flag when a full round completes (same player's turn again)
+        if (lastCurrentPlayerSocketId && lastCurrentPlayerSocketId === currentPlayer.socketId) {
+            hasCaughtThisTurn = false;
+        }
+        lastCurrentPlayerSocketId = currentPlayer.socketId;
+
         currentPlayerName.textContent = currentPlayer.name;
         if (currentPlayer.socketId === mySocketId) {
             currentPlayerName.textContent += ' (You)';
