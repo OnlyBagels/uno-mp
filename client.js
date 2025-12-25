@@ -759,8 +759,9 @@ function renderPlayerHand(gameState) {
         return;
     }
 
-    // Show LAST CARD button only when player has 2 cards left
-    if (gameState.playerHand.length === 2) {
+    // Show LAST CARD button when player has 2 or 1 cards left
+    // This allows calling LAST CARD before playing second-to-last card, or after if missed
+    if (gameState.playerHand.length === 2 || gameState.playerHand.length === 1) {
         lastCardBtn.style.display = 'block';
     } else {
         lastCardBtn.style.display = 'none';
