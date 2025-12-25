@@ -1,6 +1,7 @@
 // File-based authentication for persistence on Render
 const fs = require('fs');
 const path = require('path');
+const { isUsernameBlacklisted, getBlacklistErrorMessage } = require('./username-blacklist');
 
 const USERS_FILE = path.join(__dirname, '../users.json');
 
@@ -73,6 +74,11 @@ module.exports = {
             return { success: false, message: 'Password must be at least 4 characters' };
         }
 
+        // Check username against blacklist
+        if (isUsernameBlacklisted(username)) {
+            return { success: false, message: getBlacklistErrorMessage() };
+        }
+
         users.set(username, {
             username,
             password,
@@ -106,6 +112,14 @@ module.exports = {
                 success: true,
                 user: existingUser,
                 isNewUser: false
+            };
+        }
+
+        // Check username against blacklist for new OAuth users
+        if (isUsernameBlacklisted(username)) {
+            return {
+                success: false,
+                message: getBlacklistErrorMessage()
             };
         }
 

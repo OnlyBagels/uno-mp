@@ -95,6 +95,7 @@ function getLeaderboard(gameType = 'total', limit = 100, offset = 0) {
             total_points,
             last_updated
         FROM player_stats
+        WHERE username != 'admin'
         ORDER BY ${orderBy} DESC
         LIMIT ? OFFSET ?
     `);
@@ -123,7 +124,7 @@ function searchPlayers(searchTerm, gameType = 'total', limit = 50) {
             total_points,
             last_updated
         FROM player_stats
-        WHERE username LIKE ?
+        WHERE username LIKE ? AND username != 'admin'
         ORDER BY ${orderBy} DESC
         LIMIT ?
     `);
@@ -147,11 +148,19 @@ function getPlayerRank(username, gameType = 'total') {
     const stmt = db.prepare(`
         SELECT COUNT(*) as rank
         FROM player_stats
-        WHERE ${pointsColumn} > ?
+        WHERE ${pointsColumn} > ? AND username != 'admin'
     `);
 
     const result = stmt.get(stats[pointsColumn]);
     return result.rank + 1; // +1 because we want rank starting from 1
+}
+
+// Sync all registered users to leaderboard (called when users register)
+function ensureUserInLeaderboard(username) {
+    // Simply calling getPlayerStats will create the entry if it doesn't exist
+    if (username && username !== 'admin') {
+        getPlayerStats(username);
+    }
 }
 
 // Initialize on module load
@@ -162,5 +171,6 @@ module.exports = {
     recordWin,
     getLeaderboard,
     searchPlayers,
-    getPlayerRank
+    getPlayerRank,
+    ensureUserInLeaderboard
 };

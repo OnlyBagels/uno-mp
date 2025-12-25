@@ -68,6 +68,8 @@ if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
         const result = auth.registerOAuthUser(discordProfile, 'discord');
 
         if (result.success) {
+            // Add to leaderboard
+            leaderboard.ensureUserInLeaderboard(result.user.username);
             return done(null, result.user);
         } else {
             return done(new Error('Failed to register Discord user'));
@@ -97,6 +99,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         const result = auth.registerOAuthUser(googleProfile, 'google');
 
         if (result.success) {
+            // Add to leaderboard
+            leaderboard.ensureUserInLeaderboard(result.user.username);
             return done(null, result.user);
         } else {
             return done(new Error('Failed to register Google user'));
@@ -224,6 +228,9 @@ app.post('/api/login', express.json(), (req, res) => {
     const result = auth.login(username, password);
 
     if (result.success) {
+        // Ensure user is in leaderboard
+        leaderboard.ensureUserInLeaderboard(result.user.username);
+
         req.session.user = result.user;
         req.session.save((err) => {
             if (err) {
@@ -239,6 +246,12 @@ app.post('/api/login', express.json(), (req, res) => {
 app.post('/api/register', express.json(), (req, res) => {
     const { username, password } = req.body;
     const result = auth.register(username, password);
+
+    // If registration successful, add to leaderboard
+    if (result.success) {
+        leaderboard.ensureUserInLeaderboard(username);
+    }
+
     res.json(result);
 });
 
@@ -250,6 +263,9 @@ app.post('/api/guest-login', (req, res) => {
         isAdmin: false,
         isMod: false
     };
+
+    // Add guest to leaderboard
+    leaderboard.ensureUserInLeaderboard(guestName);
 
     req.session.user = guestUser;
     req.session.save((err) => {
