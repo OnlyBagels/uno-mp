@@ -173,7 +173,7 @@
                     </div>
                     <div class="player-actions">
                         <button id="drawCardBtn" class="btn btn-secondary">Draw Card</button>
-                        <button id="unoBtn" class="btn btn-uno">ONE CARD!</button>
+                        <button id="lastCardBtn" class="btn btn-last-card">LAST CARD!</button>
                     </div>
                 </div>
             </div>
@@ -187,11 +187,11 @@
     <!-- Notification System -->
     <div id="notificationContainer" class="notification-container"></div>
 
-    <!-- UNO Popup Notification -->
-    <div id="unoPopup" class="uno-popup hidden">
-        <div class="uno-popup-content">
-            <span id="unoPlayerName"></span> called<br>
-            <span class="uno-text">ONE CARD!</span>
+    <!-- Last Card Popup Notification -->
+    <div id="lastCardPopup" class="last-card-popup hidden">
+        <div class="last-card-popup-content">
+            <span id="lastCardPlayerName"></span> called<br>
+            <span class="last-card-text">LAST CARD!</span>
         </div>
     </div>
 
@@ -228,6 +228,60 @@
             </div>
         </div>
     </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content settings-menu">
+            <div class="modal-header">
+                <h2>Customize Your Experience</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Card Colors</h3>
+                    <div class="color-setting">
+                        <label>Red Cards:</label>
+                        <input type="color" id="colorRed" value="#ff5555">
+                        <button class="btn-reset" onclick="resetColor('red')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Blue Cards:</label>
+                        <input type="color" id="colorBlue" value="#5555ff">
+                        <button class="btn-reset" onclick="resetColor('blue')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Green Cards:</label>
+                        <input type="color" id="colorGreen" value="#55aa55">
+                        <button class="btn-reset" onclick="resetColor('green')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Yellow Cards:</label>
+                        <input type="color" id="colorYellow" value="#ffaa00">
+                        <button class="btn-reset" onclick="resetColor('yellow')">Reset</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Background Gradient</h3>
+                    <div class="color-setting">
+                        <label>Gradient Start:</label>
+                        <input type="color" id="gradientStart" value="#1e3c72">
+                    </div>
+                    <div class="color-setting">
+                        <label>Gradient End:</label>
+                        <input type="color" id="gradientEnd" value="#2a5298">
+                    </div>
+                    <button class="btn btn-secondary" onclick="resetGradient()">Reset Gradient</button>
+                </div>
+                <div class="settings-section">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                    <button class="btn btn-danger" onclick="resetAllSettings()">Reset All to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Button -->
+    <button id="settingsBtn" class="floating-settings-btn" onclick="openSettings()">🎨</button>
 
     <!-- Admin Button (only visible to admins) -->
     <button id="adminMenuBtn" class="floating-admin-btn hidden" onclick="openAdminMenu()">⚙️</button>

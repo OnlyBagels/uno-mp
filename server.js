@@ -133,7 +133,7 @@ class Player {
         this.name = name;
         this.socketId = socketId;
         this.hand = [];
-        this.calledUno = false;
+        this.calledLastCard = false;
         this.isMod = false;
         this.isAdmin = false;
         this.drawnThisTurn = false;
@@ -141,7 +141,7 @@ class Player {
 
     addCard(card) {
         this.hand.push(card);
-        this.calledUno = false;
+        this.calledLastCard = false;
     }
 
     removeCard(cardIndex) {
@@ -155,7 +155,7 @@ class Player {
     }
 }
 
-class UnoGame {
+class WildDrawGame {
     constructor(roomCode, maxPlayers, password = null, creatorName = '', creatorSocketId = '') {
         this.roomCode = roomCode;
         this.maxPlayers = maxPlayers;
@@ -175,7 +175,7 @@ class UnoGame {
         this.creatorName = creatorName; // Name of player who created the room
         this.creatorSocketId = creatorSocketId; // Socket ID of the creator
         this.createdAt = Date.now(); // Timestamp when room was created
-        this.unoPenaltyQueue = []; // Track players who need UNO penalty
+        this.lastCardPenaltyQueue = []; // Track players who need LAST CARD penalty
     }
 
     addPlayer(socketId, name) {
@@ -217,7 +217,7 @@ class UnoGame {
 
         this.players.forEach(player => {
             player.hand = [];
-            player.calledUno = false;
+            player.calledLastCard = false;
             for (let i = 0; i < 7; i++) {
                 player.addCard(this.deck.draw());
             }
@@ -285,9 +285,9 @@ class UnoGame {
             return { success: true, winner: player.name };
         }
 
-        // If player doesn't have exactly 1 card anymore, reset UNO status
+        // If player doesn't have exactly 1 card anymore, reset LAST CARD status
         if (player.hand.length !== 1) {
-            player.calledUno = false;
+            player.calledLastCard = false;
         }
 
         if (card.isSpecial()) {
@@ -383,7 +383,7 @@ class UnoGame {
                 this.players.forEach(player => {
                     allCards.push(...player.hand);
                     player.hand = [];
-                    player.calledUno = false;
+                    player.calledLastCard = false;
                 });
 
                 // Shuffle all cards
@@ -448,16 +448,16 @@ class UnoGame {
         return { success: true, card: drawnCard, canPlay };
     }
 
-    callUno(socketId) {
+    callLastCard(socketId) {
         const player = this.getPlayerBySocketId(socketId);
         if (!player) {
             return false;
         }
 
-        // Allow calling UNO when player has 1 or 2 cards
+        // Allow calling LAST CARD when player has 1 or 2 cards
         // (2 cards when about to play a card, 1 card after playing)
         if (player.hand.length === 1 || player.hand.length === 2) {
-            player.calledUno = true;
+            player.calledLastCard = true;
             return true;
         }
         return false;
@@ -476,9 +476,9 @@ class UnoGame {
         currentPlayer.hand = targetPlayer.hand;
         targetPlayer.hand = tempHand;
 
-        // Reset UNO status for both players
-        currentPlayer.calledUno = false;
-        targetPlayer.calledUno = false;
+        // Reset LAST CARD status for both players
+        currentPlayer.calledLastCard = false;
+        targetPlayer.calledLastCard = false;
 
         // No longer waiting for player choice
         this.waitingForPlayerChoice = false;
@@ -520,10 +520,10 @@ class UnoGame {
     }
 
     nextTurn() {
-        // Check if previous player has 1 card and didn't call UNO
+        // Check if previous player has 1 card and didn't call LAST CARD
         const currentPlayer = this.getCurrentPlayer();
-        if (currentPlayer && currentPlayer.hand.length === 1 && !currentPlayer.calledUno) {
-            // Apply UNO penalty - draw 2 cards
+        if (currentPlayer && currentPlayer.hand.length === 1 && !currentPlayer.calledLastCard) {
+            // Apply LAST CARD penalty - draw 2 cards
             for (let i = 0; i < 2; i++) {
                 if (!this.deck.isEmpty()) {
                     currentPlayer.addCard(this.deck.draw());
@@ -534,9 +534,9 @@ class UnoGame {
                     currentPlayer.addCard(this.deck.draw());
                 }
             }
-            this.unoPenaltyQueue.push({
+            this.lastCardPenaltyQueue.push({
                 playerName: currentPlayer.name,
-                reason: 'Did not call UNO'
+                reason: 'Did not call LAST CARD'
             });
         }
 
@@ -656,7 +656,7 @@ io.on('connection', (socket) => {
 
     socket.on('createGame', ({ playerName, maxPlayers, password }) => {
         const roomCode = generateRoomCode();
-        const game = new UnoGame(roomCode, maxPlayers, password || null, playerName, socket.id);
+        const game = new WildDrawGame(roomCode, maxPlayers, password || null, playerName, socket.id);
         game.addPlayer(socket.id, playerName);
         games.set(roomCode, game);
 
@@ -764,7 +764,7 @@ io.on('connection', (socket) => {
                 game.pendingCard = null;
                 game.players.forEach(p => {
                     p.hand = [];
-                    p.calledUno = false;
+                    p.calledLastCard = false;
                     p.drawnThisTurn = false;
                 });
 
@@ -775,15 +775,15 @@ io.on('connection', (socket) => {
                 // Update lobby list
                 io.emit('lobbyListUpdate', getPublicLobbies());
             } else {
-                // Check if any UNO penalties were applied and broadcast them
-                if (game.unoPenaltyQueue.length > 0) {
-                    game.unoPenaltyQueue.forEach(penalty => {
-                        io.to(roomCode).emit('unoPenalty', {
+                // Check if any LAST CARD penalties were applied and broadcast them
+                if (game.lastCardPenaltyQueue.length > 0) {
+                    game.lastCardPenaltyQueue.forEach(penalty => {
+                        io.to(roomCode).emit('lastCardPenalty', {
                             playerName: penalty.playerName,
                             reason: penalty.reason
                         });
                     });
-                    game.unoPenaltyQueue = [];
+                    game.lastCardPenaltyQueue = [];
                 }
 
                 game.players.forEach(player => {
@@ -826,13 +826,13 @@ io.on('connection', (socket) => {
         }
     });
 
-    socket.on('callUno', ({ roomCode }) => {
+    socket.on('callLastCard', ({ roomCode }) => {
         const game = games.get(roomCode);
         if (!game) return;
 
-        if (game.callUno(socket.id)) {
+        if (game.callLastCard(socket.id)) {
             const player = game.getPlayerBySocketId(socket.id);
-            io.to(roomCode).emit('unoCalled', { playerName: player.name });
+            io.to(roomCode).emit('lastCardCalled', { playerName: player.name });
         }
     });
 
@@ -937,7 +937,7 @@ io.on('connection', (socket) => {
     });
 
     socket.on('adminViewHands', ({ roomCode }) => {
-        if (!isUserAdmin || !userPermissions.includes('view_hands')) {
+        if (!isUserAdmin()) {
             socket.emit('error', { message: 'Unauthorized: Admin only' });
             return;
         }
@@ -1079,7 +1079,7 @@ io.on('connection', (socket) => {
         game.direction = 1;
         game.players.forEach(p => {
             p.hand = [];
-            p.calledUno = false;
+            p.calledLastCard = false;
             p.drawnThisTurn = false;
         });
 

@@ -36,7 +36,7 @@ const gameRoomCode = document.getElementById('gameRoomCode');
 const playerHand = document.getElementById('playerHand');
 const discardPile = document.getElementById('discardPile');
 const drawCardBtn = document.getElementById('drawCardBtn');
-const unoBtn = document.getElementById('unoBtn');
+const lastCardBtn = document.getElementById('lastCardBtn');
 const currentPlayerName = document.getElementById('currentPlayerName');
 const directionArrow = document.getElementById('directionArrow');
 const gameMessage = document.getElementById('gameMessage');
@@ -380,9 +380,9 @@ drawCardBtn.addEventListener('click', () => {
     }
 });
 
-unoBtn.addEventListener('click', () => {
+lastCardBtn.addEventListener('click', () => {
     if (currentRoomCode) {
-        socket.emit('callUno', { roomCode: currentRoomCode });
+        socket.emit('callLastCard', { roomCode: currentRoomCode });
     }
 });
 
@@ -542,25 +542,25 @@ socket.on('turnPassed', ({ currentPlayer }) => {
     updateMessage(`Turn passed. ${currentPlayer}'s turn!`);
 });
 
-socket.on('unoCalled', ({ playerName: unoPlayerName }) => {
-    updateMessage(`${unoPlayerName} called UNO!`);
-    if (unoPlayerName === playerName) {
-        unoBtn.classList.add('btn-uno-active');
+socket.on('lastCardCalled', ({ playerName: lastCardPlayerName }) => {
+    updateMessage(`${lastCardPlayerName} called LAST CARD!`);
+    if (lastCardPlayerName === playerName) {
+        lastCardBtn.classList.add('btn-last-card-active');
         setTimeout(() => {
-            unoBtn.classList.remove('btn-uno-active');
+            lastCardBtn.classList.remove('btn-last-card-active');
         }, 1000);
     }
 
-    // Show UNO popup to all players
-    const unoPopup = document.getElementById('unoPopup');
-    const unoPlayerNameElement = document.getElementById('unoPlayerName');
-    if (unoPopup && unoPlayerNameElement) {
-        unoPlayerNameElement.textContent = unoPlayerName;
-        unoPopup.classList.remove('hidden');
+    // Show LAST CARD popup to all players
+    const lastCardPopup = document.getElementById('lastCardPopup');
+    const lastCardPlayerNameElement = document.getElementById('lastCardPlayerName');
+    if (lastCardPopup && lastCardPlayerNameElement) {
+        lastCardPlayerNameElement.textContent = lastCardPlayerName;
+        lastCardPopup.classList.remove('hidden');
 
         // Auto-hide after 3 seconds
         setTimeout(() => {
-            unoPopup.classList.add('hidden');
+            lastCardPopup.classList.add('hidden');
         }, 3000);
     }
 });
@@ -570,9 +570,9 @@ socket.on('handsSwapped', ({ player1, player2 }) => {
     showNotification(`${player1} and ${player2} swapped hands!`, 'info');
 });
 
-socket.on('unoPenalty', ({ playerName }) => {
-    updateMessage(`${playerName} drew 2 cards for not calling UNO!`);
-    showNotification(`${playerName} drew 2 cards for not calling UNO!`, 'warning');
+socket.on('lastCardPenalty', ({ playerName }) => {
+    updateMessage(`${playerName} drew 2 cards for not calling LAST CARD!`);
+    showNotification(`${playerName} drew 2 cards for not calling LAST CARD!`, 'warning');
 });
 
 socket.on('gameOver', ({ winner }) => {
@@ -1189,3 +1189,108 @@ function updateLobbyList(lobbies) {
         lobbyListContainer.appendChild(lobbyDiv);
     });
 }
+
+// Customization System
+const defaultSettings = {
+    cardColors: {
+        red: '#ff5555',
+        blue: '#5555ff',
+        green: '#55aa55',
+        yellow: '#ffaa00'
+    },
+    gradient: {
+        start: '#1e3c72',
+        end: '#2a5298'
+    }
+};
+
+function loadCustomSettings() {
+    const saved = localStorage.getItem('wildDrawCustomization');
+    if (saved) {
+        try {
+            const settings = JSON.parse(saved);
+            applyCustomSettings(settings);
+            updateSettingsUI(settings);
+        } catch (e) {
+            console.error('Failed to load custom settings:', e);
+        }
+    }
+}
+
+function applyCustomSettings(settings) {
+    // Apply card colors
+    if (settings.cardColors) {
+        Object.keys(settings.cardColors).forEach(color => {
+            document.documentElement.style.setProperty(`--card-${color}`, settings.cardColors[color]);
+        });
+    }
+
+    // Apply gradient
+    if (settings.gradient) {
+        document.documentElement.style.setProperty('--gradient-start', settings.gradient.start);
+        document.documentElement.style.setProperty('--gradient-end', settings.gradient.end);
+    }
+}
+
+function updateSettingsUI(settings) {
+    if (settings.cardColors) {
+        document.getElementById('colorRed').value = settings.cardColors.red;
+        document.getElementById('colorBlue').value = settings.cardColors.blue;
+        document.getElementById('colorGreen').value = settings.cardColors.green;
+        document.getElementById('colorYellow').value = settings.cardColors.yellow;
+    }
+
+    if (settings.gradient) {
+        document.getElementById('gradientStart').value = settings.gradient.start;
+        document.getElementById('gradientEnd').value = settings.gradient.end;
+    }
+}
+
+window.openSettings = function() {
+    document.getElementById('settingsModal').classList.remove('hidden');
+}
+
+window.closeSettings = function() {
+    document.getElementById('settingsModal').classList.add('hidden');
+}
+
+window.saveSettings = function() {
+    const settings = {
+        cardColors: {
+            red: document.getElementById('colorRed').value,
+            blue: document.getElementById('colorBlue').value,
+            green: document.getElementById('colorGreen').value,
+            yellow: document.getElementById('colorYellow').value
+        },
+        gradient: {
+            start: document.getElementById('gradientStart').value,
+            end: document.getElementById('gradientEnd').value
+        }
+    };
+
+    localStorage.setItem('wildDrawCustomization', JSON.stringify(settings));
+    applyCustomSettings(settings);
+    showNotification('Settings saved!', 'success');
+    closeSettings();
+}
+
+window.resetColor = function(color) {
+    document.getElementById('color' + color.charAt(0).toUpperCase() + color.slice(1)).value = defaultSettings.cardColors[color];
+}
+
+window.resetGradient = function() {
+    document.getElementById('gradientStart').value = defaultSettings.gradient.start;
+    document.getElementById('gradientEnd').value = defaultSettings.gradient.end;
+}
+
+window.resetAllSettings = function() {
+    updateSettingsUI(defaultSettings);
+    localStorage.removeItem('wildDrawCustomization');
+    applyCustomSettings(defaultSettings);
+    showNotification('All settings reset to default', 'info');
+}
+
+// Load custom settings on page load
+window.addEventListener('DOMContentLoaded', () => {
+    loadCustomSettings();
+});

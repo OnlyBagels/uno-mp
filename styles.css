@@ -1,3 +1,15 @@
+:root {
+    /* Customizable card colors */
+    --card-red: #ff5555;
+    --card-blue: #5555ff;
+    --card-green: #55aa55;
+    --card-yellow: #ffaa00;
+
+    /* Customizable background gradient */
+    --gradient-start: #667eea;
+    --gradient-end: #764ba2;
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,7 +18,7 @@
 
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, var(--gradient-start) 0%, var(--gradient-end) 100%);
     min-height: 100vh;
     display: flex;
     justify-content: center;
@@ -625,20 +637,20 @@ h1 {
     box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
 }
 
-.btn-uno {
+.btn-last-card {
     background: #ef4444;
     color: white;
     font-size: 1.2rem;
     padding: 12px 30px;
 }
 
-.btn-uno:hover {
+.btn-last-card:hover {
     background: #dc2626;
     transform: scale(1.05);
     box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
 }
 
-.btn-uno-active {
+.btn-last-card-active {
     animation: pulse 0.5s ease-in-out;
 }
 
@@ -837,22 +849,22 @@ h1 {
 }
 
 .card-red {
-    background: radial-gradient(circle at 30% 30%, #ff4444, #cc0000);
+    background: radial-gradient(circle at 30% 30%, var(--card-red), color-mix(in srgb, var(--card-red) 70%, black));
     color: white;
 }
 
 .card-blue {
-    background: radial-gradient(circle at 30% 30%, #4488ff, #0044cc);
+    background: radial-gradient(circle at 30% 30%, var(--card-blue), color-mix(in srgb, var(--card-blue) 70%, black));
     color: white;
 }
 
 .card-green {
-    background: radial-gradient(circle at 30% 30%, #44ff44, #00cc00);
+    background: radial-gradient(circle at 30% 30%, var(--card-green), color-mix(in srgb, var(--card-green) 70%, black));
     color: white;
 }
 
 .card-yellow {
-    background: radial-gradient(circle at 30% 30%, #ffdd44, #ddaa00);
+    background: radial-gradient(circle at 30% 30%, var(--card-yellow), color-mix(in srgb, var(--card-yellow) 70%, black));
     color: white;
 }
 
@@ -1013,8 +1025,8 @@ h1 {
     transform: scale(1.05);
 }
 
-/* UNO Popup */
-.uno-popup {
+/* Last Card Popup */
+.last-card-popup {
     position: fixed;
     top: 50%;
     left: 50%;
@@ -1026,29 +1038,29 @@ h1 {
     z-index: 1000;
     text-align: center;
     border: 5px solid #ff6b00;
-    animation: unoPopIn 0.3s ease-out;
+    animation: lastCardPopIn 0.3s ease-out;
 }
 
-.uno-popup-content {
+.last-card-popup-content {
     color: white;
     text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.5);
     font-weight: bold;
 }
 
-.uno-popup-content #unoPlayerName {
+.last-card-popup-content #lastCardPlayerName {
     font-size: 2rem;
     display: block;
     margin-bottom: 10px;
 }
 
-.uno-popup-content .uno-text {
+.last-card-popup-content .last-card-text {
     font-size: 4rem;
     letter-spacing: 8px;
     display: block;
     animation: pulse 0.5s ease-in-out infinite;
 }
 
-@keyframes unoPopIn {
+@keyframes lastCardPopIn {
     from {
         transform: translate(-50%, -50%) scale(0);
         opacity: 0;
@@ -1276,6 +1288,56 @@ h1 {
     padding: 20px;
 }
 
+.settings-section {
+    margin-bottom: 25px;
+}
+
+.settings-section h3 {
+    color: #1e3c72;
+    margin-bottom: 15px;
+    font-size: 1.2rem;
+}
+
+.color-setting {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.color-setting label {
+    min-width: 120px;
+    font-weight: 600;
+    color: #1e3c72;
+}
+
+.color-setting input[type="color"] {
+    width: 60px;
+    height: 40px;
+    border: 2px solid #1e3c72;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.btn-reset {
+    padding: 8px 16px;
+    background: #6b7280;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s ease;
+}
+
+.btn-reset:hover {
+    background: #4b5563;
+}
+
+.settings-menu .modal-header {
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+}
+
 .admin-section {
     margin-bottom: 25px;
 }
@@ -1327,9 +1389,31 @@ h1 {
     gap: 5px;
 }
 
-.floating-admin-btn {
+.floating-settings-btn {
     position: fixed;
     bottom: 120px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ec4899 0%, #db2777 100%);
+    color: white;
+    border: none;
+    font-size: 1.8rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
+    z-index: 999;
+    transition: all 0.3s ease;
+}
+
+.floating-settings-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(236, 72, 153, 0.6);
+}
+
+.floating-admin-btn {
+    position: fixed;
+    bottom: 190px;
     right: 20px;
     width: 60px;
     height: 60px;
