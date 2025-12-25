@@ -570,9 +570,21 @@ socket.on('handsSwapped', ({ player1, player2 }) => {
     showNotification(`${player1} and ${player2} swapped hands!`, 'info');
 });
 
-socket.on('lastCardPenalty', ({ playerName }) => {
-    updateMessage(`${playerName} drew 2 cards for not calling LAST CARD!`);
-    showNotification(`${playerName} drew 2 cards for not calling LAST CARD!`, 'warning');
+socket.on('lastCardPenalty', ({ playerName, cards, reason }) => {
+    updateMessage(`${playerName} drew ${cards} cards for ${reason}`);
+    showNotification(`${playerName} drew ${cards} cards for ${reason}`, 'warning');
+});
+
+socket.on('lastCardCaught', ({ success, callerName, targetName, cards }) => {
+    if (success) {
+        const message = `${callerName} caught ${targetName} for not calling LAST CARD! ${targetName} drew ${cards} cards`;
+        updateMessage(message);
+        showNotification(message, 'warning');
+    } else {
+        const message = `${callerName} made a false accusation and drew ${cards} cards!`;
+        updateMessage(message);
+        showNotification(message, 'error');
+    }
 });
 
 socket.on('gameOver', ({ winner }) => {
@@ -761,12 +773,17 @@ function renderOpponents(gameState) {
                 adminButtons = `<button class="btn-admin-small btn-admin-kick" onclick="adminKick('${player.socketId}')">Kick</button>`;
             }
 
+            let catchButton = '';
+            if (player.cardCount === 1) {
+                catchButton = `<button class="btn-catch-small" onclick="catchPlayer('${player.socketId}', '${player.name}')">Catch!</button>`;
+            }
+
             opponentDiv.innerHTML = `
                 <div class="opponent-name">${player.name} ${adminButtons}</div>
                 <div class="opponent-cards">
                     ${Array(player.cardCount).fill('').map(() => '<div class="card card-back-small"></div>').join('')}
                 </div>
-                <div class="opponent-card-count">${player.cardCount} cards</div>
+                <div class="opponent-card-count">${player.cardCount} cards ${catchButton}</div>
             `;
             opponentsArea.appendChild(opponentDiv);
         }
@@ -791,9 +808,9 @@ function createCardElement(card) {
     } else if (card.value === 'Draw Two') {
         displayValue = '+2';
     } else if (card.value === 'Skip') {
-        displayValue = '<i class="fa-solid fa-ban"></i><br>Skip';
+        displayValue = '<i class="fa-solid fa-ban"></i>';
     } else if (card.value === 'Reverse') {
-        displayValue = '<i class="fa-solid fa-rotate"></i><br>Reverse';
+        displayValue = '<i class="fa-solid fa-rotate"></i>';
     } else if (card.value === 'Wild Swap Hands') {
         displayValue = '<i class="fa-solid fa-arrow-right-arrow-left"></i><br>Swap Hands';
     } else if (card.value === 'Wild Shuffle Hands') {
@@ -844,6 +861,15 @@ function handlePlayerSelection(targetSocketId, chosenColor) {
         playerChooser.classList.add('hidden');
     }
 }
+
+window.catchPlayer = function(targetSocketId, targetName) {
+    if (confirm(`Catch ${targetName} for not calling LAST CARD?`)) {
+        socket.emit('catchLastCard', {
+            roomCode: currentRoomCode,
+            targetSocketId: targetSocketId
+        });
+    }
+};
 
 function updateGameInfo(gameState) {
     const currentPlayer = gameState.players.find(p => p.isCurrentPlayer);

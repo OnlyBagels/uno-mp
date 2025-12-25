@@ -245,10 +245,6 @@ class WildDrawGame {
         return this.discardPile[this.discardPile.length - 1];
     }
 
-    nextTurn() {
-        this.currentPlayerIndex = (this.currentPlayerIndex + this.direction + this.players.length) % this.players.length;
-    }
-
     playCard(socketId, cardIndex, chosenColor = null) {
         const player = this.getPlayerBySocketId(socketId);
         if (!player || player !== this.getCurrentPlayer()) {
@@ -259,11 +255,26 @@ class WildDrawGame {
             return { success: false, error: 'Invalid card' };
         }
 
+        // Check for LAST CARD penalties before player plays
+        const lastCardPenalties = this.checkLastCardPenalties();
+
         const card = player.hand[cardIndex];
         const topCard = this.getTopCard();
 
-        if (!card.canPlayOn(topCard)) {
-            return { success: false, error: 'Cannot play this card' };
+        // Check if there are stacked draw cards
+        if (this.stackCount > 0) {
+            // Player can only play a matching stacking card or must draw
+            const isValidStack = (this.stackType === 'draw2' && card.value === 'Draw Two') ||
+                                (this.stackType === 'draw4' && card.value === 'Wild Draw Four');
+
+            if (!isValidStack) {
+                return { success: false, error: `You must play a ${this.stackType === 'draw2' ? 'Draw Two' : 'Wild Draw Four'} to stack or draw ${this.stackCount} cards` };
+            }
+        } else {
+            // Normal play rules
+            if (!card.canPlayOn(topCard)) {
+                return { success: false, error: 'Cannot play this card' };
+            }
         }
 
         if (card.color === 'wild') {
@@ -296,7 +307,36 @@ class WildDrawGame {
             this.nextTurn();
         }
 
-        return { success: true };
+        return { success: true, lastCardPenalties };
+    }
+
+    checkLastCardPenalties() {
+        const penalties = [];
+        const currentPlayer = this.getCurrentPlayer();
+
+        // Check all players except the current player
+        this.players.forEach(player => {
+            if (player !== currentPlayer && player.hand.length === 1 && !player.calledLastCard) {
+                // Apply penalty
+                for (let i = 0; i < 2; i++) {
+                    if (!this.deck.isEmpty()) {
+                        player.addCard(this.deck.draw());
+                    } else if (this.discardPile.length > 1) {
+                        const topCard = this.discardPile.pop();
+                        this.deck.addCards(this.discardPile);
+                        this.discardPile = [topCard];
+                        player.addCard(this.deck.draw());
+                    }
+                }
+                penalties.push({
+                    playerName: player.name,
+                    cards: 2,
+                    reason: 'Did not call LAST CARD before next player played'
+                });
+            }
+        });
+
+        return penalties;
     }
 
     handleSpecialCard(card) {
@@ -323,22 +363,6 @@ class WildDrawGame {
                 this.stackCount += 2;
                 this.stackType = 'draw2';
                 this.nextTurn();
-
-                // Check if next player can stack
-                const nextPlayer = this.getCurrentPlayer();
-                const hasDrawTwo = nextPlayer.hand.some(c => c.value === 'Draw Two');
-
-                if (!hasDrawTwo) {
-                    // Next player must draw all stacked cards
-                    for (let i = 0; i < this.stackCount; i++) {
-                        if (!this.deck.isEmpty()) {
-                            nextPlayer.addCard(this.deck.draw());
-                        }
-                    }
-                    this.stackCount = 0;
-                    this.stackType = null;
-                    this.nextTurn();
-                }
                 break;
 
             case 'Wild Draw Four':
@@ -346,22 +370,6 @@ class WildDrawGame {
                 this.stackCount += 4;
                 this.stackType = 'draw4';
                 this.nextTurn();
-
-                // Check if next player can stack
-                const challengedPlayer = this.getCurrentPlayer();
-                const hasDrawFour = challengedPlayer.hand.some(c => c.value === 'Wild Draw Four');
-
-                if (!hasDrawFour) {
-                    // Next player must draw all stacked cards
-                    for (let i = 0; i < this.stackCount; i++) {
-                        if (!this.deck.isEmpty()) {
-                            challengedPlayer.addCard(this.deck.draw());
-                        }
-                    }
-                    this.stackCount = 0;
-                    this.stackType = null;
-                    this.nextTurn();
-                }
                 break;
 
             case 'Wild':
@@ -415,13 +423,57 @@ class WildDrawGame {
         }
     }
 
+    mustDrawStackedCards(player) {
+        // Returns true if the player must draw the stacked cards
+        // This happens when there are stacked cards and the player doesn't have a valid stacking card
+        if (this.stackCount === 0) {
+            return false;
+        }
+
+        if (this.stackType === 'draw2') {
+            return !player.hand.some(c => c.value === 'Draw Two');
+        } else if (this.stackType === 'draw4') {
+            return !player.hand.some(c => c.value === 'Wild Draw Four');
+        }
+
+        return false;
+    }
+
     drawCard(socketId) {
         const player = this.getPlayerBySocketId(socketId);
         if (!player || player !== this.getCurrentPlayer()) {
             return { success: false, error: 'Not your turn' };
         }
 
-        // Limit to 1 card per turn
+        // Check if there are stacked draw cards
+        if (this.stackCount > 0) {
+            // Player must draw all stacked cards
+            const drawnCards = [];
+            for (let i = 0; i < this.stackCount; i++) {
+                if (this.deck.isEmpty()) {
+                    if (this.discardPile.length > 1) {
+                        const topCard = this.discardPile.pop();
+                        this.deck.addCards(this.discardPile);
+                        this.discardPile = [topCard];
+                    }
+                }
+                if (!this.deck.isEmpty()) {
+                    const card = this.deck.draw();
+                    player.addCard(card);
+                    drawnCards.push(card);
+                }
+            }
+
+            // Reset stack and advance turn
+            const numDrawn = this.stackCount;
+            this.stackCount = 0;
+            this.stackType = null;
+            this.nextTurn();
+
+            return { success: true, drawnCards, numDrawn, wasStacked: true };
+        }
+
+        // Normal draw logic (1 card per turn)
         if (player.drawnThisTurn) {
             return { success: false, error: 'You can only draw 1 card per turn' };
         }
@@ -520,27 +572,8 @@ class WildDrawGame {
     }
 
     nextTurn() {
-        // Check if previous player has 1 card and didn't call LAST CARD
+        // Reset draw flag for current player before switching
         const currentPlayer = this.getCurrentPlayer();
-        if (currentPlayer && currentPlayer.hand.length === 1 && !currentPlayer.calledLastCard) {
-            // Apply LAST CARD penalty - draw 2 cards
-            for (let i = 0; i < 2; i++) {
-                if (!this.deck.isEmpty()) {
-                    currentPlayer.addCard(this.deck.draw());
-                } else if (this.discardPile.length > 1) {
-                    const topCard = this.discardPile.pop();
-                    this.deck.addCards(this.discardPile);
-                    this.discardPile = [topCard];
-                    currentPlayer.addCard(this.deck.draw());
-                }
-            }
-            this.lastCardPenaltyQueue.push({
-                playerName: currentPlayer.name,
-                reason: 'Did not call LAST CARD'
-            });
-        }
-
-        // Reset draw flag for next turn
         if (currentPlayer) {
             currentPlayer.drawnThisTurn = false;
         }
@@ -775,15 +808,15 @@ io.on('connection', (socket) => {
                 // Update lobby list
                 io.emit('lobbyListUpdate', getPublicLobbies());
             } else {
-                // Check if any LAST CARD penalties were applied and broadcast them
-                if (game.lastCardPenaltyQueue.length > 0) {
-                    game.lastCardPenaltyQueue.forEach(penalty => {
+                // Broadcast any LAST CARD penalties that were applied
+                if (result.lastCardPenalties && result.lastCardPenalties.length > 0) {
+                    result.lastCardPenalties.forEach(penalty => {
                         io.to(roomCode).emit('lastCardPenalty', {
                             playerName: penalty.playerName,
+                            cards: penalty.cards,
                             reason: penalty.reason
                         });
                     });
-                    game.lastCardPenaltyQueue = [];
                 }
 
                 game.players.forEach(player => {
@@ -833,6 +866,67 @@ io.on('connection', (socket) => {
         if (game.callLastCard(socket.id)) {
             const player = game.getPlayerBySocketId(socket.id);
             io.to(roomCode).emit('lastCardCalled', { playerName: player.name });
+        }
+    });
+
+    socket.on('catchLastCard', ({ roomCode, targetSocketId }) => {
+        const game = games.get(roomCode);
+        if (!game) return;
+
+        const caller = game.getPlayerBySocketId(socket.id);
+        const target = game.getPlayerBySocketId(targetSocketId);
+
+        if (!caller || !target) return;
+
+        // Check if target has 1 card and hasn't called LAST CARD
+        if (target.hand.length === 1 && !target.calledLastCard) {
+            // Valid catch - target draws 4 cards
+            for (let i = 0; i < 4; i++) {
+                if (!game.deck.isEmpty()) {
+                    target.addCard(game.deck.draw());
+                } else if (game.discardPile.length > 1) {
+                    const topCard = game.discardPile.pop();
+                    game.deck.addCards(game.discardPile);
+                    game.discardPile = [topCard];
+                    target.addCard(game.deck.draw());
+                }
+            }
+
+            io.to(roomCode).emit('lastCardCaught', {
+                callerName: caller.name,
+                targetName: target.name,
+                cards: 4,
+                success: true
+            });
+
+            // Send updated game state
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+            });
+        } else {
+            // False accusation - caller draws 2 cards
+            for (let i = 0; i < 2; i++) {
+                if (!game.deck.isEmpty()) {
+                    caller.addCard(game.deck.draw());
+                } else if (game.discardPile.length > 1) {
+                    const topCard = game.discardPile.pop();
+                    game.deck.addCards(game.discardPile);
+                    game.discardPile = [topCard];
+                    caller.addCard(game.deck.draw());
+                }
+            }
+
+            io.to(roomCode).emit('lastCardCaught', {
+                callerName: caller.name,
+                targetName: target.name,
+                cards: 2,
+                success: false
+            });
+
+            // Send updated game state
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('gameState', game.getGameState(player.socketId));
+            });
         }
     });
 
