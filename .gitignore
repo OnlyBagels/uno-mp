@@ -4,3 +4,4 @@ node_modules/
 .DS_Store
 admin-config.json
 wilddraw.db
+users.json

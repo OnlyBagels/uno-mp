@@ -14,7 +14,9 @@
       "Bash(git push:*)",
       "Bash(npm install:*)",
       "Bash(netstat:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)"
     ]
   }
 }
