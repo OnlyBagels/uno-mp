@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Leaderboard - Party Games Hub</title>
+    <link rel="stylesheet" href="leaderboard.css">
+</head>
+<body>
+    <div class="leaderboard-container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🏆 Leaderboard</h1>
+            <a href="/" class="back-btn">← Back to Hub</a>
+        </div>
+
+        <!-- Game Filter Tabs -->
+        <div class="game-tabs">
+            <button class="game-tab active" data-game="total">Overall</button>
+            <button class="game-tab" data-game="wildcard">WildCard</button>
+            <button class="game-tab" data-game="awful_answers">Awful Answers</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-section">
+            <input type="text" id="searchInput" placeholder="Search for a player..." class="search-input">
+            <button id="clearSearch" class="clear-btn">Clear</button>
+        </div>
+
+        <!-- Main Content Area -->
+        <div class="content-wrapper">
+            <!-- Player Stats Sidebar -->
+            <div class="stats-sidebar" id="statsSidebar">
+                <h2>Your Stats</h2>
+                <div id="playerStatsContent">
+                    <p class="login-prompt">Login to see your stats!</p>
+                </div>
+            </div>
+
+            <!-- Leaderboard Table -->
+            <div class="leaderboard-table-wrapper">
+                <div class="loading" id="loadingSpinner">Loading...</div>
+
+                <table class="leaderboard-table" id="leaderboardTable">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th class="sortable" data-sort="wins">Wins</th>
+                            <th class="sortable active" data-sort="points">Points ▼</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardBody">
+                        <!-- Populated by JS -->
+                    </tbody>
+                </table>
+
+                <div class="pagination">
+                    <button id="prevPage" class="page-btn">← Previous</button>
+                    <span id="pageInfo">Page 1</span>
+                    <button id="nextPage" class="page-btn">Next →</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="leaderboard.js"></script>
+</body>
+</html>

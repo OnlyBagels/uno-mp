@@ -288,6 +288,10 @@ body {
     background: linear-gradient(90deg, #ef4444, #dc2626);
 }
 
+.game-card.leaderboard::before {
+    background: linear-gradient(90deg, #f59e0b, #eab308);
+}
+
 .game-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);

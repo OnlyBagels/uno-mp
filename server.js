@@ -11,6 +11,7 @@ const GoogleStrategy = require('passport-google-oauth20').Strategy;
 const auth = require('./shared/auth');
 const { setupAwfulAnswersHandlers } = require('./awful-answers/server');
 const { generateGuestName } = require('./shared/guestNames');
+const leaderboard = require('./shared/leaderboard');
 
 const app = express();
 const server = http.createServer(app);
@@ -145,6 +146,51 @@ app.get('/wildcard', (req, res) => {
 
 app.get('/awful-answers', (req, res) => {
     res.sendFile(path.join(__dirname, 'awful-answers', 'index.html'));
+});
+
+app.get('/leaderboard', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'leaderboard.html'));
+});
+
+// Leaderboard API endpoints
+app.get('/api/leaderboard/:gameType?', (req, res) => {
+    const gameType = req.params.gameType || 'total';
+    const limit = parseInt(req.query.limit) || 100;
+    const offset = parseInt(req.query.offset) || 0;
+
+    const data = leaderboard.getLeaderboard(gameType, limit, offset);
+    res.json(data);
+});
+
+app.get('/api/leaderboard/search/:searchTerm', (req, res) => {
+    const searchTerm = req.params.searchTerm;
+    const gameType = req.query.gameType || 'total';
+    const limit = parseInt(req.query.limit) || 50;
+
+    const data = leaderboard.searchPlayers(searchTerm, gameType, limit);
+    res.json(data);
+});
+
+app.get('/api/stats/:username', (req, res) => {
+    const username = req.params.username;
+    const stats = leaderboard.getPlayerStats(username);
+
+    if (stats) {
+        const totalRank = leaderboard.getPlayerRank(username, 'total');
+        const wildcardRank = leaderboard.getPlayerRank(username, 'wildcard');
+        const awfulAnswersRank = leaderboard.getPlayerRank(username, 'awful_answers');
+
+        res.json({
+            ...stats,
+            ranks: {
+                total: totalRank,
+                wildcard: wildcardRank,
+                awful_answers: awfulAnswersRank
+            }
+        });
+    } else {
+        res.status(404).json({ error: 'Player not found' });
+    }
 });
 
 // Socket.io connection

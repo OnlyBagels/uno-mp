@@ -209,10 +209,11 @@ socket.on('roundWinner', ({ winner, gameState }) => {
     renderGame(gameState);
 });
 
-socket.on('gameOver', ({ winner }) => {
+socket.on('gameOver', ({ winner, points }) => {
     gameOverModal.classList.remove('hidden');
-    gameWinnerText.textContent = `${winner} wins the game!`;
-    showNotification(`🎉 ${winner} wins! 🎉`, 'success', 8000);
+    const pointsText = points ? ` (+${points} points)` : '';
+    gameWinnerText.textContent = `${winner} wins the game!${pointsText}`;
+    showNotification(`🎉 ${winner} wins!${pointsText} 🎉`, 'success', 8000);
 });
 
 socket.on('playerLeft', ({ playerName: leftPlayer, gameState }) => {

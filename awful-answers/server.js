@@ -1,5 +1,6 @@
 // Awful Answers Server
 const AwfulAnswersGame = require('./game');
+const leaderboard = require('../shared/leaderboard');
 
 // Store active games
 const games = new Map();
@@ -149,8 +150,19 @@ function setupAwfulAnswersHandlers(io, socket) {
 
             // Check for game winner (first to 7 points)
             if (result.winner.score >= 7) {
+                // Record win in leaderboard
+                const winResult = leaderboard.recordWin(result.winner.name, 'awful_answers');
+
                 io.to(roomCode).emit('gameOver', {
-                    winner: result.winner.name
+                    winner: result.winner.name,
+                    points: winResult.points
+                });
+
+                // Broadcast to all clients for real-time leaderboard updates
+                io.emit('playerWon', {
+                    username: result.winner.name,
+                    gameType: 'awful_answers',
+                    points: winResult.points
                 });
 
                 // Clean up game after 10 seconds

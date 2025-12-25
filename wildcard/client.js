@@ -610,17 +610,18 @@ socket.on('lastCardCaught', ({ success, callerName, targetName, cards }) => {
     }
 });
 
-socket.on('gameOver', ({ winner }) => {
-    updateMessage(`🎉 ${winner} wins the game! 🎉`);
+socket.on('gameOver', ({ winner, points }) => {
+    const pointsText = points ? ` (+${points} points)` : '';
+    updateMessage(`🎉 ${winner} wins the game!${pointsText} 🎉`);
 
     // Check if current player is the winner
     if (winner === playerName) {
         // Winner effects: Confetti!
-        showNotification(`🎉 You won! Congratulations! 🎉`, 'success', 5000);
+        showNotification(`🎉 You won! ${points ? `+${points} points earned!` : 'Congratulations!'} 🎉`, 'success', 5000);
         playWinnerEffects();
     } else {
         // Loser effects: Sad horn
-        showNotification(`${winner} wins! Better luck next time!`, 'info', 5000);
+        showNotification(`${winner} wins!${pointsText} Better luck next time!`, 'info', 5000);
         playLoserEffects();
     }
 

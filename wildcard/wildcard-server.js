@@ -4,6 +4,7 @@ const { Server } = require('socket.io');
 const path = require('path');
 const fs = require('fs');
 const db = require('./database');
+const leaderboard = require('../shared/leaderboard');
 
 const app = express();
 const server = http.createServer(app);
@@ -783,7 +784,20 @@ io.on('connection', (socket) => {
             if (result.needsColor) {
                 socket.emit('chooseColor', {});
             } else if (result.winner) {
-                io.to(roomCode).emit('gameOver', { winner: result.winner });
+                // Record win in leaderboard
+                const winResult = leaderboard.recordWin(result.winner, 'wildcard');
+
+                io.to(roomCode).emit('gameOver', {
+                    winner: result.winner,
+                    points: winResult.points
+                });
+
+                // Broadcast to all clients for real-time leaderboard updates
+                io.emit('playerWon', {
+                    username: result.winner,
+                    gameType: 'wildcard',
+                    points: winResult.points
+                });
 
                 // Reset game but keep lobby
                 game.gameStarted = false;
