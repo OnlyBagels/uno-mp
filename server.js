@@ -584,10 +584,12 @@ io.on('connection', (socket) => {
         socket.join(roomCode);
         socket.emit('gameJoined', { roomCode, gameState: game.getGameState(socket.id) });
 
-        // Notify all players in the room
-        io.to(roomCode).emit('playerJoined', {
-            playerName,
-            gameState: game.getGameState()
+        // Send updated game state to each player individually with correct isCreator flag
+        game.players.forEach(player => {
+            io.to(player.socketId).emit('playerJoined', {
+                playerName,
+                gameState: game.getGameState(player.socketId)
+            });
         });
 
         // Broadcast lobby list update
@@ -725,9 +727,13 @@ io.on('connection', (socket) => {
         if (targetPlayer) {
             game.removePlayer(targetSocketId);
             io.to(targetSocketId).emit('kicked', { message: 'You were kicked by an admin' });
-            io.to(roomCode).emit('playerLeft', {
-                playerName: targetPlayer.name + ' (Kicked)',
-                gameState: game.getGameState()
+
+            // Send updated game state to each remaining player
+            game.players.forEach(player => {
+                io.to(player.socketId).emit('playerLeft', {
+                    playerName: targetPlayer.name + ' (Kicked)',
+                    gameState: game.getGameState(player.socketId)
+                });
             });
             console.log(`Admin kicked player: ${targetPlayer.name} from ${roomCode}`);
         }
@@ -1035,9 +1041,13 @@ io.on('connection', (socket) => {
             const player = game.getPlayerBySocketId(socket.id);
             if (player) {
                 game.removePlayer(socket.id);
-                io.to(roomCode).emit('playerLeft', {
-                    playerName: player.name,
-                    gameState: game.getGameState()
+
+                // Send updated game state to each remaining player
+                game.players.forEach(p => {
+                    io.to(p.socketId).emit('playerLeft', {
+                        playerName: player.name,
+                        gameState: game.getGameState(p.socketId)
+                    });
                 });
 
                 // Remove empty games
