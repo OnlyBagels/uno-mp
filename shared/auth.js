@@ -83,5 +83,59 @@ module.exports = {
         saveUsers(); // Persist to file
 
         return { success: true, message: 'Account created successfully!' };
+    },
+
+    // Register or get OAuth user (Discord/Google)
+    registerOAuthUser(profile, provider) {
+        const username = profile.username || profile.displayName;
+        const providerId = provider === 'discord' ? profile.discordId : profile.googleId;
+        const lookupKey = `${provider}_${providerId}`;
+
+        // Check if OAuth user already exists
+        let existingUser = null;
+        for (const [key, user] of users.entries()) {
+            if (user[`${provider}Id`] === providerId) {
+                existingUser = user;
+                break;
+            }
+        }
+
+        if (existingUser) {
+            // User already registered via this OAuth provider
+            return {
+                success: true,
+                user: existingUser,
+                isNewUser: false
+            };
+        }
+
+        // Create new OAuth user
+        const newUser = {
+            username,
+            [`${provider}Id`]: providerId,
+            avatar: profile.avatar,
+            email: profile.email || null,
+            isAdmin: false,
+            isMod: false,
+            isGuest: false,
+            [`is${provider.charAt(0).toUpperCase() + provider.slice(1)}`]: true,
+            oauthProvider: provider
+        };
+
+        // Use OAuth ID as the key to prevent conflicts
+        users.set(lookupKey, newUser);
+        saveUsers();
+
+        return {
+            success: true,
+            user: newUser,
+            isNewUser: true
+        };
+    },
+
+    // Get OAuth user by provider ID
+    getOAuthUser(providerId, provider) {
+        const lookupKey = `${provider}_${providerId}`;
+        return users.get(lookupKey);
     }
 };

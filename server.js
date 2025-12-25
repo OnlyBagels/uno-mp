@@ -48,17 +48,20 @@ if (process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET) {
         scope: ['identify']
     },
     (accessToken, refreshToken, profile, done) => {
-        // Save Discord user
-        const discordUser = {
+        // Register or get Discord user from persistent storage
+        const discordProfile = {
             username: profile.username,
             discordId: profile.id,
-            avatar: profile.avatar,
-            isGuest: false,
-            isAdmin: false,
-            isMod: false,
-            isDiscord: true
+            avatar: profile.avatar
         };
-        return done(null, discordUser);
+
+        const result = auth.registerOAuthUser(discordProfile, 'discord');
+
+        if (result.success) {
+            return done(null, result.user);
+        } else {
+            return done(new Error('Failed to register Discord user'));
+        }
     }));
     console.log('✅ Discord OAuth2 enabled');
 } else {
@@ -73,18 +76,21 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
         callbackURL: process.env.GOOGLE_CALLBACK_URL || 'http://localhost:3000/auth/google/callback'
     },
     (accessToken, refreshToken, profile, done) => {
-        // Save Google user
-        const googleUser = {
-            username: profile.displayName || profile.emails[0].value.split('@')[0],
+        // Register or get Google user from persistent storage
+        const googleProfile = {
+            displayName: profile.displayName || profile.emails[0].value.split('@')[0],
             googleId: profile.id,
             email: profile.emails[0].value,
-            avatar: profile.photos[0]?.value,
-            isGuest: false,
-            isAdmin: false,
-            isMod: false,
-            isGoogle: true
+            avatar: profile.photos[0]?.value
         };
-        return done(null, googleUser);
+
+        const result = auth.registerOAuthUser(googleProfile, 'google');
+
+        if (result.success) {
+            return done(null, result.user);
+        } else {
+            return done(new Error('Failed to register Google user'));
+        }
     }));
     console.log('✅ Google OAuth2 enabled');
 } else {
