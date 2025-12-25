@@ -406,6 +406,118 @@ body {
     font-weight: 500;
 }
 
+/* Age Warning Modal */
+.age-warning-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.3s ease;
+}
+
+.age-warning-content {
+    background: white;
+    border-radius: 20px;
+    padding: 40px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+.age-warning-content h2 {
+    color: var(--danger-color);
+    font-size: 2rem;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.warning-text {
+    color: var(--text-dark);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.warning-list {
+    color: var(--text-dark);
+    margin-left: 20px;
+    margin-bottom: 20px;
+    line-height: 1.8;
+}
+
+.warning-list li {
+    margin-bottom: 8px;
+}
+
+.age-requirement {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 15px;
+    border-radius: 10px;
+    text-align: center;
+    margin-bottom: 20px;
+    font-size: 1.1rem;
+}
+
+.remember-choice {
+    margin-bottom: 25px;
+}
+
+.remember-choice label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-dark);
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.remember-choice input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.warning-buttons {
+    display: flex;
+    gap: 15px;
+}
+
+.btn-decline {
+    flex: 1;
+    background: #e2e8f0;
+    color: var(--text-dark);
+}
+
+.btn-decline:hover {
+    background: #cbd5e1;
+}
+
+.btn-accept {
+    flex: 1;
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-accept:hover {
+    background: #dc2626;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .main-title {

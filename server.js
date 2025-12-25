@@ -5,6 +5,7 @@ const http = require('http');
 const socketIo = require('socket.io');
 const path = require('path');
 const session = require('express-session');
+const FileStore = require('session-file-store')(session);
 const passport = require('passport');
 const DiscordStrategy = require('passport-discord').Strategy;
 const GoogleStrategy = require('passport-google-oauth20').Strategy;
@@ -19,12 +20,21 @@ const io = socketIo(server);
 
 const PORT = process.env.PORT || 3000;
 
-// Session configuration
+// Session configuration with persistent file store
 app.use(session({
+    store: new FileStore({
+        path: path.join(__dirname, 'sessions'),
+        ttl: 86400 * 30, // 30 days
+        retries: 0
+    }),
     secret: process.env.SESSION_SECRET || 'party-games-hub-secret-key-change-in-production',
     resave: false,
     saveUninitialized: false,
-    cookie: { secure: false } // Set to true if using HTTPS
+    cookie: {
+        secure: false, // Set to true if using HTTPS
+        maxAge: 1000 * 60 * 60 * 24 * 30, // 30 days
+        httpOnly: true
+    }
 }));
 
 // Passport configuration
@@ -199,11 +209,77 @@ app.get('/api/stats/:username', (req, res) => {
     }
 });
 
+// Session-based login/register endpoints for persistent auth
+app.post('/api/login', express.json(), (req, res) => {
+    const { username, password } = req.body;
+    const result = auth.login(username, password);
+
+    if (result.success) {
+        req.session.user = result.user;
+        req.session.save((err) => {
+            if (err) {
+                return res.status(500).json({ success: false, message: 'Session error' });
+            }
+            res.json({ success: true, user: result.user });
+        });
+    } else {
+        res.json({ success: false, message: result.message });
+    }
+});
+
+app.post('/api/register', express.json(), (req, res) => {
+    const { username, password } = req.body;
+    const result = auth.register(username, password);
+    res.json(result);
+});
+
+app.post('/api/guest-login', (req, res) => {
+    const guestName = generateGuestName();
+    const guestUser = {
+        username: guestName,
+        isGuest: true,
+        isAdmin: false,
+        isMod: false
+    };
+
+    req.session.user = guestUser;
+    req.session.save((err) => {
+        if (err) {
+            return res.status(500).json({ success: false, message: 'Session error' });
+        }
+        res.json({ success: true, user: guestUser });
+    });
+});
+
+app.get('/api/session', (req, res) => {
+    if (req.isAuthenticated()) {
+        // OAuth user
+        res.json({ user: req.user });
+    } else if (req.session.user) {
+        // Traditional/guest user
+        res.json({ user: req.session.user });
+    } else {
+        res.json({ user: null });
+    }
+});
+
+app.post('/api/logout', (req, res) => {
+    req.logout(() => {
+        req.session.destroy((err) => {
+            if (err) {
+                return res.status(500).json({ success: false });
+            }
+            res.clearCookie('connect.sid');
+            res.json({ success: true });
+        });
+    });
+});
+
 // Socket.io connection
 io.on('connection', (socket) => {
     console.log(`New client connected: ${socket.id}`);
 
-    // Authentication events
+    // Deprecated: Legacy socket-based auth (keeping for backwards compatibility)
     socket.on('login', ({ username, password }) => {
         const result = auth.login(username, password);
         if (result.success) {

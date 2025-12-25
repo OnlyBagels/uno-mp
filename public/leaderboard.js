@@ -238,28 +238,16 @@ nextPageBtn.addEventListener('click', () => {
 
 // Check for logged in user
 window.addEventListener('DOMContentLoaded', async () => {
-    // Check session storage
-    const storedSession = localStorage.getItem('partyGamesSession');
-    if (storedSession) {
-        try {
-            const session = JSON.parse(storedSession);
-            currentUser = session.username;
-            await loadPlayerStats(currentUser);
-        } catch (e) {
-            // Ignore
-        }
-    }
-
-    // Check OAuth session
+    // Check session via API
     try {
-        const response = await fetch('/auth/user');
+        const response = await fetch('/api/session');
         const data = await response.json();
         if (data.user) {
             currentUser = data.user.username;
             await loadPlayerStats(currentUser);
         }
     } catch (e) {
-        // Ignore
+        console.log('No active session');
     }
 
     // Load leaderboard
