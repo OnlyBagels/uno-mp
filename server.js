@@ -152,7 +152,7 @@ class Player {
 }
 
 class UnoGame {
-    constructor(roomCode, maxPlayers, password = null, creatorName = '') {
+    constructor(roomCode, maxPlayers, password = null, creatorName = '', creatorSocketId = '') {
         this.roomCode = roomCode;
         this.maxPlayers = maxPlayers;
         this.deck = null;
@@ -167,6 +167,7 @@ class UnoGame {
         this.stackType = null; // 'draw2' or 'draw4'
         this.password = password; // Room password (null if no password)
         this.creatorName = creatorName; // Name of player who created the room
+        this.creatorSocketId = creatorSocketId; // Socket ID of the creator
         this.createdAt = Date.now(); // Timestamp when room was created
     }
 
@@ -434,7 +435,8 @@ class UnoGame {
             waitingForColorChoice: this.waitingForColorChoice,
             maxPlayers: this.maxPlayers,
             stackCount: this.stackCount,
-            stackType: this.stackType
+            stackType: this.stackType,
+            isCreator: forSocketId === this.creatorSocketId
         };
     }
 
@@ -542,7 +544,7 @@ io.on('connection', (socket) => {
 
     socket.on('createGame', ({ playerName, maxPlayers, password }) => {
         const roomCode = generateRoomCode();
-        const game = new UnoGame(roomCode, maxPlayers, password || null, playerName);
+        const game = new UnoGame(roomCode, maxPlayers, password || null, playerName, socket.id);
         game.addPlayer(socket.id, playerName);
         games.set(roomCode, game);
 
@@ -602,6 +604,12 @@ io.on('connection', (socket) => {
     socket.on('startGame', ({ roomCode }) => {
         const game = games.get(roomCode);
         if (!game) return;
+
+        // Check if the player is the creator
+        if (game.creatorSocketId !== socket.id) {
+            socket.emit('error', { message: 'Only the lobby creator can start the game' });
+            return;
+        }
 
         if (game.startGame()) {
             io.to(roomCode).emit('gameStarted', {

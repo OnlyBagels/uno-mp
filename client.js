@@ -541,6 +541,13 @@ function updateLobby(gameState) {
         lobbyPlayersList.appendChild(playerDiv);
     });
     playerCount.textContent = `${gameState.players.length}/${gameState.maxPlayers} players`;
+
+    // Show/hide start button based on creator status
+    if (gameState.isCreator) {
+        startGameBtn.classList.remove('hidden');
+    } else {
+        startGameBtn.classList.add('hidden');
+    }
 }
 
 // Game rendering
