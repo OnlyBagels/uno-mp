@@ -37,7 +37,7 @@ const leaveLobbyBtn = document.getElementById('leaveLobbyBtn');
 const gameRoomCode = document.getElementById('gameRoomCode');
 const playerHand = document.getElementById('playerHand');
 const discardPile = document.getElementById('discardPile');
-const drawCardBtn = document.getElementById('drawCardBtn');
+const drawPile = document.getElementById('drawPile');
 const lastCardBtn = document.getElementById('lastCardBtn');
 const currentPlayerName = document.getElementById('currentPlayerName');
 const directionArrow = document.getElementById('directionArrow');
@@ -376,11 +376,15 @@ leaveLobbyBtn.addEventListener('click', () => {
 });
 
 // Event Listeners - Game
-drawCardBtn.addEventListener('click', () => {
+// Make draw pile clickable
+drawPile.addEventListener('click', () => {
     if (currentRoomCode) {
         socket.emit('drawCard', { roomCode: currentRoomCode });
     }
 });
+
+// Add hover effect for draw pile
+drawPile.style.cursor = 'pointer';
 
 lastCardBtn.addEventListener('click', () => {
     if (currentRoomCode) {
@@ -794,7 +798,9 @@ function renderOpponents(gameState) {
 
             let catchButton = '';
             if (player.cardCount === 1) {
-                catchButton = `<button class="btn-catch-small" onclick="catchPlayer('${player.socketId}', '${player.name}')">Catch!</button>`;
+                const disabledClass = hasCaughtThisTurn ? 'disabled' : '';
+                const buttonText = hasCaughtThisTurn ? '✓ Used' : 'Catch!';
+                catchButton = `<button class="btn-catch-small ${disabledClass}" onclick="catchPlayer('${player.socketId}', '${player.name}')" ${hasCaughtThisTurn ? 'disabled' : ''}>${buttonText}</button>`;
             }
 
             opponentDiv.innerHTML = `

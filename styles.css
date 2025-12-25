@@ -758,6 +758,15 @@ h1 {
 
 .draw-pile {
     cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.draw-pile:hover {
+    transform: scale(1.05);
+}
+
+.draw-pile:active {
+    transform: scale(0.98);
 }
 
 .cards-remaining {
@@ -1038,9 +1047,22 @@ h1 {
     color: white;
 }
 
-.btn-catch-small:hover {
+.btn-catch-small:hover:not(:disabled) {
     background: #dc2626;
     transform: scale(1.05);
+}
+
+.btn-catch-small:disabled,
+.btn-catch-small.disabled {
+    background: #6b7280;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-catch-small:disabled:hover,
+.btn-catch-small.disabled:hover {
+    background: #6b7280;
+    transform: none;
 }
 
 /* Last Card Popup */
