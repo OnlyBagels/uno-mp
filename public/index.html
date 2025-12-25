@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Party Games Hub</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Login/Account Screen -->
+    <div id="accountScreen" class="screen">
+        <div class="container">
+            <h1 class="main-title">🎮 Party Games Hub</h1>
+            <p class="subtitle">Multiplayer party games for you and your friends</p>
+
+            <div class="auth-container">
+                <div class="tab-buttons">
+                    <button id="loginTabBtn" class="tab-btn active" onclick="showTab('login')">Login</button>
+                    <button id="registerTabBtn" class="tab-btn" onclick="showTab('register')">Register</button>
+                    <button id="guestTabBtn" class="tab-btn" onclick="showTab('guest')">Play as Guest</button>
+                </div>
+
+                <!-- Login Tab -->
+                <div id="loginTab" class="tab-content active">
+                    <h2>Login</h2>
+                    <input type="text" id="loginUsername" placeholder="Username" class="input-field">
+                    <input type="password" id="loginPassword" placeholder="Password" class="input-field">
+                    <button id="loginBtn" class="btn btn-primary">Login</button>
+                </div>
+
+                <!-- Register Tab -->
+                <div id="registerTab" class="tab-content">
+                    <h2>Create Account</h2>
+                    <input type="text" id="registerUsername" placeholder="Username" class="input-field">
+                    <input type="password" id="registerPassword" placeholder="Password" class="input-field">
+                    <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password" class="input-field">
+                    <button id="registerBtn" class="btn btn-primary">Register</button>
+                </div>
+
+                <!-- Guest Tab -->
+                <div id="guestTab" class="tab-content">
+                    <h2>Play as Guest</h2>
+                    <p>No account needed - just pick a username!</p>
+                    <input type="text" id="guestUsername" placeholder="Username" class="input-field">
+                    <button id="guestBtn" class="btn btn-primary">Continue as Guest</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Selection Screen -->
+    <div id="gameSelectionScreen" class="screen hidden">
+        <div class="container">
+            <div class="header-bar">
+                <h1 class="main-title">🎮 Party Games Hub</h1>
+                <div class="user-info">
+                    <span id="usernameDisplay"></span>
+                    <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+                </div>
+            </div>
+
+            <h2 class="section-title">Choose Your Game</h2>
+
+            <div class="games-grid">
+                <!-- WildCard Game -->
+                <div class="game-card wildcard">
+                    <div class="game-icon">🃏</div>
+                    <h3>WildCard</h3>
+                    <p class="game-description">Fast-paced card game with draw stacking, special cards, and penalties!</p>
+                    <div class="game-details">
+                        <span class="detail-badge">2-10 Players</span>
+                        <span class="detail-badge">10-20 min</span>
+                    </div>
+                    <button class="btn btn-game" onclick="selectGame('wildcard')">Play WildCard</button>
+                </div>
+
+                <!-- Awful Answers Game -->
+                <div class="game-card awful-answers">
+                    <div class="game-icon">😈</div>
+                    <h3>Awful Answers</h3>
+                    <p class="game-description">Fill in the blanks with the most awful, hilarious answers. Adults only!</p>
+                    <div class="game-details">
+                        <span class="detail-badge">4-20 Players</span>
+                        <span class="detail-badge">30-90 min</span>
+                        <span class="detail-badge age-rating">17+</span>
+                    </div>
+                    <button class="btn btn-game" onclick="selectGame('awful-answers')">Play Awful Answers</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

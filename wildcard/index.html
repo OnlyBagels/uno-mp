@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wild Draw - Multiplayer Card Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+</head>
+<body>
+    <!-- Account Login Screen -->
+    <div id="accountScreen" class="screen">
+        <div class="login-container">
+            <h1>Wild Draw</h1>
+            <div class="account-tabs">
+                <button id="loginTabBtn" class="tab-btn active">Login</button>
+                <button id="registerTabBtn" class="tab-btn">Register</button>
+            </div>
+
+            <!-- Login Tab -->
+            <div id="loginTab" class="tab-content active">
+                <div class="account-form">
+                    <input type="text" id="loginUsername" placeholder="Username" maxlength="20" autocomplete="username">
+                    <input type="password" id="loginPassword" placeholder="Password" maxlength="50" autocomplete="current-password">
+                    <button id="loginBtn" class="btn btn-primary">Login</button>
+                    <div class="divider-small">OR</div>
+                    <button id="guestBtn" class="btn btn-secondary">Continue as Guest</button>
+                </div>
+            </div>
+
+            <!-- Register Tab -->
+            <div id="registerTab" class="tab-content">
+                <div class="account-form">
+                    <input type="text" id="registerUsername" placeholder="Username" maxlength="20" autocomplete="username">
+                    <input type="password" id="registerPassword" placeholder="Password" maxlength="50" autocomplete="new-password">
+                    <input type="password" id="registerPasswordConfirm" placeholder="Confirm Password" maxlength="50" autocomplete="new-password">
+                    <button id="registerBtn" class="btn btn-primary">Create Account</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lobby Selection Screen -->
+    <div id="loginScreen" class="screen hidden">
+        <div class="login-container">
+            <h1>Wild Draw</h1>
+            <div class="user-info-bar">
+                <span id="usernameDisplay"></span>
+                <button id="logoutBtn" class="btn btn-danger-small">Logout</button>
+            </div>
+            <div class="login-form">
+                <input type="text" id="playerNameInput" placeholder="Enter your display name" maxlength="20">
+
+                <div class="game-options">
+                    <div class="option-group">
+                        <h3>Create New Game</h3>
+                        <label for="maxPlayers">Max Players:</label>
+                        <select id="maxPlayers">
+                            <option value="2">2 Players</option>
+                            <option value="3">3 Players</option>
+                            <option value="4" selected>4 Players</option>
+                            <option value="5">5 Players</option>
+                            <option value="6">6 Players</option>
+                            <option value="7">7 Players</option>
+                            <option value="8">8 Players</option>
+                            <option value="9">9 Players</option>
+                            <option value="10">10 Players</option>
+                        </select>
+                        <label for="passwordInput">Password (Optional):</label>
+                        <input type="password" id="passwordInput" placeholder="Leave blank for no password" maxlength="20">
+                        <button id="createGameBtn" class="btn btn-primary">Create Game</button>
+                    </div>
+
+                    <div class="divider">OR</div>
+
+                    <div class="option-group">
+                        <h3>Join by Code</h3>
+                        <input type="text" id="roomCodeInput" placeholder="Enter room code" maxlength="6">
+                        <input type="password" id="joinPasswordInput" placeholder="Password (if required)" maxlength="20">
+                        <button id="joinGameBtn" class="btn btn-secondary">Join Game</button>
+                    </div>
+                </div>
+
+                <div class="lobby-list-section">
+                    <h3>Available Lobbies</h3>
+                    <div id="lobbyList" class="lobby-list"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lobby Screen -->
+    <div id="lobbyScreen" class="screen hidden">
+        <div class="lobby-container">
+            <h1>Game Lobby</h1>
+            <div class="room-info">
+                <h2>Room Code: <span id="roomCodeDisplay"></span></h2>
+                <p class="share-info">Share this code with friends to join!</p>
+            </div>
+
+            <div class="players-waiting">
+                <h3>Players in Lobby:</h3>
+                <div id="lobbyPlayersList"></div>
+                <p id="playerCount">0/4 players</p>
+            </div>
+
+            <button id="startGameBtn" class="btn btn-primary">Start Game</button>
+            <button id="leaveLobbyBtn" class="btn btn-secondary">Leave Lobby</button>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-container">
+            <header>
+                <h1>Wild Draw</h1>
+                <div class="game-controls">
+                    <div class="room-code-badge">Room: <span id="gameRoomCode"></span></div>
+                    <button id="leaveGameBtn" class="btn btn-danger">Leave Game</button>
+                </div>
+            </header>
+
+            <div class="game-board">
+                <div class="game-info">
+                    <div class="current-player">
+                        <span id="currentPlayerName">Waiting...</span>'s Turn
+                    </div>
+                    <div class="direction-indicator">
+                        Direction: <span id="directionArrow">→</span>
+                    </div>
+                </div>
+
+                <div class="opponents-area" id="opponentsArea">
+                    <!-- Opponent players will be dynamically added here -->
+                </div>
+
+                <div class="play-area">
+                    <div class="deck-area">
+                        <div class="draw-pile" id="drawPile">
+                            <div class="card card-back">
+                                <span>DRAW</span>
+                            </div>
+                            <div class="cards-remaining">
+                                Cards: <span id="deckCount">108</span>
+                            </div>
+                        </div>
+
+                        <div class="discard-pile" id="discardPile">
+                            <!-- Top card of discard pile -->
+                        </div>
+                    </div>
+
+                    <div class="color-chooser hidden" id="colorChooser">
+                        <h3>Choose a Color</h3>
+                        <div class="color-options">
+                            <button class="color-btn red" data-color="red"></button>
+                            <button class="color-btn blue" data-color="blue"></button>
+                            <button class="color-btn green" data-color="green"></button>
+                            <button class="color-btn yellow" data-color="yellow"></button>
+                        </div>
+                    </div>
+
+                    <div class="player-chooser hidden" id="playerChooser">
+                        <h3>Choose a Player to Swap Hands With</h3>
+                        <div id="playerOptions" class="player-options"></div>
+                    </div>
+                </div>
+
+                <div class="player-area">
+                    <div class="player-hand" id="playerHand">
+                        <!-- Player's cards will be dynamically added here -->
+                    </div>
+                    <div class="player-actions">
+                        <button id="lastCardBtn" class="btn btn-last-card">LAST CARD!</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="message-area" id="messageArea">
+                <p id="gameMessage">Waiting for game to start...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <!-- Last Card Popup Notification -->
+    <div id="lastCardPopup" class="last-card-popup hidden">
+        <div class="last-card-popup-content">
+            <span id="lastCardPlayerName"></span> called<br>
+            <span class="last-card-text">LAST CARD!</span>
+        </div>
+    </div>
+
+    <!-- Catch Popup Notification -->
+    <div id="catchPopup" class="catch-popup hidden">
+        <div class="catch-popup-content">
+            <span id="catchMessage"></span>
+        </div>
+    </div>
+
+    <!-- Admin Menu Modal -->
+    <div id="adminMenuModal" class="modal hidden">
+        <div class="modal-content admin-menu">
+            <div class="modal-header">
+                <h2>Admin Control Panel</h2>
+                <button class="modal-close" onclick="closeAdminMenu()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="admin-section">
+                    <h3>Players in Room</h3>
+                    <div id="adminPlayersList"></div>
+                </div>
+                <div class="admin-section">
+                    <h3>Quick Actions</h3>
+                    <div class="admin-actions">
+                        <button class="btn btn-secondary" onclick="adminSkipTurn()">Skip Turn</button>
+                        <button class="btn btn-secondary" onclick="adminViewHands()">View All Hands</button>
+                        <button class="btn btn-danger" onclick="adminEndGame()">End Game</button>
+                        <button class="btn btn-secondary" onclick="adminResetGame()">Reset Game</button>
+                    </div>
+                </div>
+                <div class="admin-section">
+                    <h3>Change Color</h3>
+                    <div class="color-options">
+                        <button class="color-btn red" onclick="adminChangeColor('red')"></button>
+                        <button class="color-btn blue" onclick="adminChangeColor('blue')"></button>
+                        <button class="color-btn green" onclick="adminChangeColor('green')"></button>
+                        <button class="color-btn yellow" onclick="adminChangeColor('yellow')"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="modal hidden">
+        <div class="modal-content settings-menu">
+            <div class="modal-header">
+                <h2>Customize Your Experience</h2>
+                <button class="modal-close" onclick="closeSettings()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="settings-section">
+                    <h3>Card Colors</h3>
+                    <div class="color-setting">
+                        <label>Red Cards:</label>
+                        <input type="color" id="colorRed" value="#ff5555">
+                        <button class="btn-reset" onclick="resetColor('red')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Blue Cards:</label>
+                        <input type="color" id="colorBlue" value="#5555ff">
+                        <button class="btn-reset" onclick="resetColor('blue')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Green Cards:</label>
+                        <input type="color" id="colorGreen" value="#55aa55">
+                        <button class="btn-reset" onclick="resetColor('green')">Reset</button>
+                    </div>
+                    <div class="color-setting">
+                        <label>Yellow Cards:</label>
+                        <input type="color" id="colorYellow" value="#ffaa00">
+                        <button class="btn-reset" onclick="resetColor('yellow')">Reset</button>
+                    </div>
+                </div>
+                <div class="settings-section">
+                    <h3>Background Gradient</h3>
+                    <div class="color-setting">
+                        <label>Gradient Start:</label>
+                        <input type="color" id="gradientStart" value="#1e3c72">
+                    </div>
+                    <div class="color-setting">
+                        <label>Gradient End:</label>
+                        <input type="color" id="gradientEnd" value="#2a5298">
+                    </div>
+                    <button class="btn btn-secondary" onclick="resetGradient()">Reset Gradient</button>
+                </div>
+                <div class="settings-section">
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                    <button class="btn btn-danger" onclick="resetAllSettings()">Reset All to Default</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Button -->
+    <button id="settingsBtn" class="floating-settings-btn" onclick="openSettings()">🎨</button>
+
+    <!-- Admin Button (only visible to admins) -->
+    <button id="adminMenuBtn" class="floating-admin-btn hidden" onclick="openAdminMenu()">⚙️</button>
+
+    <!-- Chat System -->
+    <div id="chatContainer" class="chat-container">
+        <div class="chat-header" onclick="toggleChat()">
+            <span>💬 Chat</span>
+            <span id="chatToggle">▼</span>
+        </div>
+        <div id="chatMessages" class="chat-messages"></div>
+        <div class="chat-input-area">
+            <button id="emojiBtn" class="btn-emoji">😊</button>
+            <div id="emojiPicker" class="emoji-picker hidden">
+                <div class="emoji-grid">
+                    <span class="emoji-option">😀</span><span class="emoji-option">😃</span><span class="emoji-option">😄</span><span class="emoji-option">😁</span>
+                    <span class="emoji-option">😅</span><span class="emoji-option">😂</span><span class="emoji-option">🤣</span><span class="emoji-option">😊</span>
+                    <span class="emoji-option">😇</span><span class="emoji-option">🙂</span><span class="emoji-option">😉</span><span class="emoji-option">😌</span>
+                    <span class="emoji-option">😍</span><span class="emoji-option">🥰</span><span class="emoji-option">😘</span><span class="emoji-option">😗</span>
+                    <span class="emoji-option">😋</span><span class="emoji-option">😛</span><span class="emoji-option">😝</span><span class="emoji-option">😜</span>
+                    <span class="emoji-option">🤪</span><span class="emoji-option">🤨</span><span class="emoji-option">🧐</span><span class="emoji-option">🤓</span>
+                    <span class="emoji-option">😎</span><span class="emoji-option">🤩</span><span class="emoji-option">🥳</span><span class="emoji-option">😏</span>
+                    <span class="emoji-option">😒</span><span class="emoji-option">😞</span><span class="emoji-option">😔</span><span class="emoji-option">😟</span>
+                    <span class="emoji-option">😕</span><span class="emoji-option">😢</span><span class="emoji-option">😭</span><span class="emoji-option">😤</span>
+                    <span class="emoji-option">😠</span><span class="emoji-option">😡</span><span class="emoji-option">🤬</span><span class="emoji-option">😱</span>
+                    <span class="emoji-option">😨</span><span class="emoji-option">😰</span><span class="emoji-option">😥</span><span class="emoji-option">🤔</span>
+                    <span class="emoji-option">🤗</span><span class="emoji-option">🤭</span><span class="emoji-option">🤫</span><span class="emoji-option">🤥</span>
+                    <span class="emoji-option">👍</span><span class="emoji-option">👎</span><span class="emoji-option">👊</span><span class="emoji-option">✊</span>
+                    <span class="emoji-option">🤝</span><span class="emoji-option">✌️</span><span class="emoji-option">🤞</span><span class="emoji-option">🤟</span>
+                    <span class="emoji-option">🤘</span><span class="emoji-option">👌</span><span class="emoji-option">🤌</span><span class="emoji-option">👏</span>
+                    <span class="emoji-option">🙌</span><span class="emoji-option">👐</span><span class="emoji-option">🔥</span><span class="emoji-option">💯</span>
+                    <span class="emoji-option">❤️</span><span class="emoji-option">🧡</span><span class="emoji-option">💛</span><span class="emoji-option">💚</span>
+                    <span class="emoji-option">💙</span><span class="emoji-option">💜</span><span class="emoji-option">🖤</span><span class="emoji-option">🤍</span>
+                    <span class="emoji-option">⭐</span><span class="emoji-option">✨</span><span class="emoji-option">💫</span><span class="emoji-option">🎉</span>
+                    <span class="emoji-option">🎊</span><span class="emoji-option">🎈</span><span class="emoji-option">🎁</span><span class="emoji-option">🏆</span>
+                </div>
+            </div>
+            <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
+            <button id="chatSendBtn" class="btn-chat-send">Send</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>

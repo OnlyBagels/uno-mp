@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Awful Answers - Adult Party Card Game</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Lobby Screen -->
+    <div id="lobbyScreen" class="screen">
+        <div class="container">
+            <h1 class="game-title">😈 Awful Answers</h1>
+            <p class="game-subtitle">Fill in the blanks with the most awful, hilarious answers</p>
+            <p class="age-warning">⚠️ For ages 17+ only - Contains mature content</p>
+
+            <div class="lobby-actions">
+                <button id="backToHub" class="btn btn-secondary">← Back to Games Hub</button>
+
+                <div class="action-group">
+                    <input type="text" id="playerNameInput" placeholder="Your Name" class="input-field" maxlength="20">
+
+                    <div class="game-setup">
+                        <select id="maxPlayersSelect" class="input-field">
+                            <option value="4">4 Players</option>
+                            <option value="6">6 Players</option>
+                            <option value="8">8 Players</option>
+                            <option value="10" selected>10 Players</option>
+                            <option value="15">15 Players</option>
+                            <option value="20">20 Players</option>
+                        </select>
+
+                        <input type="password" id="passwordInput" placeholder="Password (Optional)" class="input-field">
+                        <button id="createGameBtn" class="btn btn-primary">Create Game</button>
+                    </div>
+
+                    <div class="divider">OR</div>
+
+                    <div class="join-setup">
+                        <input type="text" id="roomCodeInput" placeholder="Room Code" class="input-field" maxlength="4">
+                        <input type="password" id="joinPasswordInput" placeholder="Password (if needed)" class="input-field">
+                        <button id="joinGameBtn" class="btn btn-primary">Join Game</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Waiting Room Screen -->
+    <div id="waitingRoomScreen" class="screen hidden">
+        <div class="container">
+            <h1 class="game-title">😈 Awful Answers</h1>
+
+            <div class="room-info">
+                <h2>Room Code: <span id="waitingRoomCode" class="room-code"></span></h2>
+                <p>Share this code with friends to join!</p>
+            </div>
+
+            <div class="players-waiting">
+                <h3>Players (<span id="playerCount">0</span>/<span id="maxPlayerCount">10</span>)</h3>
+                <div id="playersList" class="players-list"></div>
+            </div>
+
+            <div class="game-rules">
+                <h3>How to Play:</h3>
+                <ol>
+                    <li>One player is the <strong>Card Czar</strong> each round</li>
+                    <li>The Card Czar reads a <strong>Black Card</strong> with a fill-in-the-blank</li>
+                    <li>Everyone else picks their funniest <strong>White Card(s)</strong> to fill in the blank</li>
+                    <li>The Card Czar reads all answers and picks the funniest one</li>
+                    <li>Winner gets 1 Awesome Point! First to <strong>7 points wins</strong></li>
+                </ol>
+            </div>
+
+            <div class="waiting-actions">
+                <button id="startGameBtn" class="btn btn-primary hidden">Start Game</button>
+                <button id="leaveWaitingBtn" class="btn btn-danger">Leave Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen hidden">
+        <div class="game-container">
+            <!-- Header -->
+            <div class="game-header">
+                <div class="game-info">
+                    <h2 class="room-code-display">Room: <span id="gameRoomCode"></span></h2>
+                    <button id="leaveGameBtn" class="btn btn-small btn-danger">Leave</button>
+                </div>
+            </div>
+
+            <!-- Main Game Area -->
+            <div class="game-content">
+                <!-- Left: Players & Scores -->
+                <div class="players-panel">
+                    <h3>Players</h3>
+                    <div id="playersScores" class="players-scores"></div>
+                </div>
+
+                <!-- Center: Black Card & Status -->
+                <div class="center-panel">
+                    <div class="round-status">
+                        <h2 id="roundStatus">Waiting for game to start...</h2>
+                        <p id="roundSubStatus"></p>
+                    </div>
+
+                    <div class="black-card-area">
+                        <div id="blackCardDisplay" class="black-card">
+                            <div class="card-content">Select a black card</div>
+                        </div>
+                    </div>
+
+                    <!-- Card Czar View: Submitted Answers -->
+                    <div id="czarAnswersArea" class="czar-answers hidden">
+                        <h3>Select the Funniest Answer:</h3>
+                        <div id="submittedAnswers" class="submitted-answers"></div>
+                    </div>
+
+                    <!-- Winner Display -->
+                    <div id="winnerDisplay" class="winner-display hidden">
+                        <h2>🏆 Round Winner! 🏆</h2>
+                        <p id="winnerText"></p>
+                        <button id="nextRoundBtn" class="btn btn-primary">Next Round</button>
+                    </div>
+                </div>
+
+                <!-- Right: Your Hand -->
+                <div class="hand-panel">
+                    <h3>Your Hand</h3>
+                    <p id="handStatus" class="hand-status"></p>
+                    <div id="playerHand" class="player-hand"></div>
+                    <button id="submitAnswerBtn" class="btn btn-primary hidden">Submit Answer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="modal hidden">
+        <div class="modal-content">
+            <h1>🎉 Game Over! 🎉</h1>
+            <h2 id="gameWinnerText"></h2>
+            <button id="returnToLobbyBtn" class="btn btn-primary">Return to Lobby</button>
+        </div>
+    </div>
+
+    <!-- Notification System -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
