@@ -163,6 +163,21 @@ function ensureUserInLeaderboard(username) {
     }
 }
 
+// Sync all users from auth system to leaderboard
+function syncAllUsersToLeaderboard(usersList) {
+    if (!Array.isArray(usersList)) return;
+
+    let syncCount = 0;
+    usersList.forEach(([key, userData]) => {
+        if (userData.username && userData.username !== 'admin') {
+            ensureUserInLeaderboard(userData.username);
+            syncCount++;
+        }
+    });
+
+    console.log(`✅ Synced ${syncCount} users to leaderboard`);
+}
+
 // Initialize on module load
 initializeDatabase();
 
@@ -172,5 +187,6 @@ module.exports = {
     getLeaderboard,
     searchPlayers,
     getPlayerRank,
-    ensureUserInLeaderboard
+    ensureUserInLeaderboard,
+    syncAllUsersToLeaderboard
 };

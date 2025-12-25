@@ -151,5 +151,10 @@ module.exports = {
     getOAuthUser(providerId, provider) {
         const lookupKey = `${provider}_${providerId}`;
         return users.get(lookupKey);
+    },
+
+    // Get all users for syncing to leaderboard
+    getAllUsers() {
+        return Array.from(users.entries());
     }
 };

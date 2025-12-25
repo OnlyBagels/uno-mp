@@ -366,4 +366,8 @@ server.listen(PORT, () => {
     console.log(`🎮 Party Games Hub running on port ${PORT}`);
     console.log(`🃏 WildCard available at http://localhost:${PORT}/wildcard`);
     console.log(`😈 Awful Answers available at http://localhost:${PORT}/awful-answers`);
+
+    // Sync all existing users to leaderboard on startup
+    const allUsers = auth.getAllUsers();
+    leaderboard.syncAllUsersToLeaderboard(allUsers);
 });
