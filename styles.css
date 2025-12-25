@@ -1586,6 +1586,55 @@ h1 {
     padding: 10px;
     background: white;
     border-top: 1px solid #e5e7eb;
+    position: relative;
+}
+
+.btn-emoji {
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px 8px;
+    transition: transform 0.2s ease;
+}
+
+.btn-emoji:hover {
+    transform: scale(1.2);
+}
+
+.emoji-picker {
+    position: absolute;
+    bottom: 60px;
+    left: 10px;
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    max-width: 280px;
+}
+
+.emoji-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.emoji-option {
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 5px;
+    text-align: center;
+    transition: background 0.2s ease;
+}
+
+.emoji-option:hover {
+    background: #f3f4f6;
+    transform: scale(1.2);
 }
 
 #chatInput {

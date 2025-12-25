@@ -755,7 +755,15 @@ function renderPlayerHand(gameState) {
 
     if (!gameState.playerHand || gameState.playerHand.length === 0) {
         playerHand.innerHTML = '<p style="text-align: center; color: #6b7280;">No cards</p>';
+        lastCardBtn.style.display = 'none';
         return;
+    }
+
+    // Show LAST CARD button only when player has 2 cards left
+    if (gameState.playerHand.length === 2) {
+        lastCardBtn.style.display = 'block';
+    } else {
+        lastCardBtn.style.display = 'none';
     }
 
     gameState.playerHand.forEach((card, index) => {
@@ -1166,6 +1174,36 @@ document.getElementById('chatInput').addEventListener('keypress', (e) => {
 });
 
 document.getElementById('chatSendBtn').addEventListener('click', sendChatMessage);
+
+// Emoji picker functionality
+const emojiBtn = document.getElementById('emojiBtn');
+const emojiPicker = document.getElementById('emojiPicker');
+const chatInput = document.getElementById('chatInput');
+
+emojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    emojiPicker.classList.toggle('hidden');
+});
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', (e) => {
+    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+        emojiPicker.classList.add('hidden');
+    }
+});
+
+// Handle emoji selection
+document.querySelectorAll('.emoji-option').forEach(emoji => {
+    emoji.addEventListener('click', () => {
+        const cursorPos = chatInput.selectionStart;
+        const textBefore = chatInput.value.substring(0, cursorPos);
+        const textAfter = chatInput.value.substring(cursorPos);
+        chatInput.value = textBefore + emoji.textContent + textAfter;
+        chatInput.focus();
+        chatInput.setSelectionRange(cursorPos + emoji.textContent.length, cursorPos + emoji.textContent.length);
+        emojiPicker.classList.add('hidden');
+    });
+});
 
 // Display chat message
 function displayChatMessage(data) {
