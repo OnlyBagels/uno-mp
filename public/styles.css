@@ -292,6 +292,10 @@ body {
     background: linear-gradient(90deg, #f59e0b, #eab308);
 }
 
+.game-card.platformer::before {
+    background: linear-gradient(90deg, #4a9eff, #16213e);
+}
+
 .game-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);

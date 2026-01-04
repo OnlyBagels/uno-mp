@@ -181,6 +181,10 @@ app.get('/leaderboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'leaderboard.html'));
 });
 
+app.get('/platformer', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'platformer', 'index.html'));
+});
+
 // Leaderboard API endpoints
 app.get('/api/leaderboard/:gameType?', (req, res) => {
     const gameType = req.params.gameType || 'total';
@@ -366,6 +370,7 @@ server.listen(PORT, () => {
     console.log(`🎮 Party Games Hub running on port ${PORT}`);
     console.log(`🃏 WildCard available at http://localhost:${PORT}/wildcard`);
     console.log(`😈 Awful Answers available at http://localhost:${PORT}/awful-answers`);
+    console.log(`🕹️  Super Platformer available at http://localhost:${PORT}/platformer`);
 
     // Sync all existing users to leaderboard on startup
     const allUsers = auth.getAllUsers();
